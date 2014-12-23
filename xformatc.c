@@ -135,7 +135,7 @@ static unsigned table['z' - ' ' + 1];
 #define N (sizeof(table)/sizeof(unsigned))
 
 
-void make()
+void make(void)
 {
     int c,i;
     int cl;
@@ -682,9 +682,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                          */
                     case 'B':
                     	if (va_arg(args,int) != 0)
-                    		out = ms_true;
+                    		out = (char*)ms_true;
                     	else
-                    		out = ms_false;
+                    		out = (char*)ms_false;
 
                         length = (int)xstrlen(out);
                         break;
