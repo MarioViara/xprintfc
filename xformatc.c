@@ -239,16 +239,16 @@ static const char ms_digits[] = "0123456789abcdef";
 /**
  * String used when %s as null parameter
  */
-static char  ms_null[] = "(null)";
+static const char  ms_null[] = "(null)";
 /*
  * String for true value
  */
-static char  ms_true[] = "True";
+static const char  ms_true[] = "True";
 
 /**
  * String for false value
  */
-static char  ms_false[]= "False";
+static const char  ms_false[]= "False";
 
 
 /*
