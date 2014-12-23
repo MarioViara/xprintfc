@@ -339,10 +339,12 @@ static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char
     
     for (i = 0; i < len ; i++)
     {
-        if (flags  & FLAG_UPPER)
+        if (flags  & FLAG_UPPER) 
+        {
             (*myoutchar)(arg,toUpperCase(buffer[i]));
-        else
+        } else {
             (*myoutchar)(arg,buffer[i]);
+        }
         count++;
     }
 
