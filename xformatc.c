@@ -830,7 +830,7 @@ static void testFormat(const char * fmt,...)
     
 }
 
-int main()
+int main(void)
 {
     printf("XFORMATC test\n\n");
     testFormat("Hello world");
