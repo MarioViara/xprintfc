@@ -135,7 +135,7 @@ static unsigned table['z' - ' ' + 1];
 #define N (sizeof(table)/sizeof(unsigned))
 
 
-void make()
+void make(void)
 {
     int c,i;
     int cl;
@@ -239,16 +239,16 @@ static const char ms_digits[] = "0123456789abcdef";
 /**
  * String used when %s as null parameter
  */
-static char  ms_null[] = "(null)";
+static const char  ms_null[] = "(null)";
 /*
  * String for true value
  */
-static char  ms_true[] = "True";
+static const char  ms_true[] = "True";
 
 /**
  * String for false value
  */
-static char  ms_false[]= "False";
+static const char  ms_false[]= "False";
 
 
 /*
@@ -339,10 +339,12 @@ static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char
     
     for (i = 0; i < len ; i++)
     {
-        if (flags  & FLAG_UPPER)
+        if (flags  & FLAG_UPPER) 
+        {
             (*myoutchar)(arg,toUpperCase(buffer[i]));
-        else
+        } else {
             (*myoutchar)(arg,buffer[i]);
+        }
         count++;
     }
 
@@ -682,9 +684,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                          */
                     case 'B':
                     	if (va_arg(args,int) != 0)
-                    		out = ms_true;
+                    		out = (char*)ms_true;
                     	else
-                    		out = ms_false;
+                    		out = (char*)ms_false;
 
                         length = (int)xstrlen(out);
                         break;
@@ -828,7 +830,7 @@ static void testFormat(const char * fmt,...)
     
 }
 
-int main()
+int main(void)
 {
     printf("XFORMATC test\n\n");
     testFormat("Hello world");
