@@ -2,10 +2,22 @@
  * @file        xformatc.c
  *
  * @brief       Printf C implementation.
+ *
+ * Tested wuth the following operating systems / compilers :
+ *
+ * - Visual studio 6
+ * - Visual studio 2008 / Windows CE
+ * - MinGw 32
+ * - Linux i686
+ * - Linux x86_64
+ * - GCC wiith embedded ARM.
+ * - Linux armel
+ * - HCS08 with Freescale compiler.
+ * - SDCC
  * 
  * @author      Mario Viara
  * 
- * @version     1.04
+ * @version     1.05
  * 
  * @copyright   Copyright Mario Viara 2014  - License Open Source (LGPL)
  * This is a free software and is opened for education, research and commercial
@@ -20,18 +32,20 @@
 #include  "xformatc.h"
 
 /**
- * Detect support for va_copy
+ * Detect support for va_copy this macro must be called for example
+ * in X64 machine to adjust the stack frame when an argument of va_list
+ * is passed over functions.
  */
-#ifdef	__GNUC__
-#define	VA_COPY	1
+#ifdef  __GNUC__
+#define VA_COPY 1
 #endif
 
-#ifndef	VA_COPY
-#define	VA_COPY	0
+#ifndef VA_COPY
+#define VA_COPY 0
 #endif
 
 /**
- * Define XCFG_FORMAT_FLOAT=0 to avoid floating point support
+ * Define XCFG_FORMAT_FLOAT=0 to remove floating point support
  */
 #ifndef XCFG_FORMAT_FLOAT
 #define XCFG_FORMAT_FLOAT    1
@@ -41,26 +55,47 @@ enum
 {
     /* The argument is long integer */
     FLAG_LONG       = 0x00000001,
+
     /* The field is filled with '0' */
     FLAG_ZERO       = 0x00000004,
+
     /* The field is filled with ' ' */
     FLAG_SPACE      = 0x00000008,
+
     /* Left alignment */
     FLAG_LEFT       = 0x00000010,
+
     /* Decimal field */
     FLAG_DECIMAL    = 0x00000020,
+
     /* Integer field */
     FLAG_INTEGER    = 0x00000040,
+
     /* Output in upper case letter */
     FLAG_UPPER      = 0x00000080,
+
     /* Field is negative */
     FLAG_MINUS      = 0x00000100,
+
     /* Precision set */
     FLAG_PREC       = 0x00000200,
+
     /* Value set */
     FLAG_VALUE      = 0x00000400,
+    
     /* Buffer set */
-    FLAG_BUFFER     = 0x00000800
+    FLAG_BUFFER     = 0x00000800,
+
+    /* Prefix required */
+    FLAG_PREFIX     = 0x00001000,
+
+    /* Blank before positive integer number */
+    FLAG_BLANK      = 0x00002000,
+
+    /* force a + before positive number */
+    FLAG_PLUS       = 0x00004000
+
+                      
 };
 
 /**
@@ -69,19 +104,26 @@ enum
 enum State
 {
     /* Normal state outputting literal */
-    ST_NORMAL = 0,  
+    ST_NORMAL = 0,
+    
     /* Just read % */
-    ST_PERCENT = 1, 
+    ST_PERCENT = 1,
+    
     /* Just read flag */
-    ST_FLAG = 2,    
+    ST_FLAG = 2,
+    
     /* Just read the width */
-    ST_WIDTH = 3,   
+    ST_WIDTH = 3,
+    
     /* Just read '.' */
-    ST_DOT= 4,  
+    ST_DOT= 4,
+    
     /* Just read the precision */
-    ST_PRECIS = 5,  
+    ST_PRECIS = 5,
+    
     /* Just  read the size */
-    ST_SIZE = 6,    
+    ST_SIZE = 6,
+    
     /* Just read the type specifier */
     ST_TYPE = 7 
 };
@@ -155,8 +197,11 @@ void make(void)
                 break;
             case    ' ':
             case    '-':
+            case    '#':
+            case    '+':
                 cl = CH_FLAG;
                 break;
+                
             case    '0':
                 cl = CH_ZERO;
                 break;
@@ -192,7 +237,7 @@ void make(void)
             case    'p':
             case    'P':
             case    'f':
-            case	'B':
+            case    'B':
                 cl = CH_TYPE;
                 break;
 
@@ -258,20 +303,19 @@ static const char  ms_false[]= "False";
 
 static const unsigned char formatStates[] =
 {
-	0x06,0x00,0x00,0x00,0x00,0x01,0x00,0x00,
-	0x10,0x00,0x03,0x00,0x00,0x06,0x02,0x10,
-	0x04,0x45,0x45,0x45,0x45,0x05,0x05,0x05,
-	0x05,0x35,0x30,0x00,0x50,0x60,0x00,0x00,
-	0x00,0x20,0x28,0x38,0x50,0x50,0x00,0x00,
-	0x00,0x30,0x30,0x30,0x50,0x50,0x00,0x00,
-	0x08,0x20,0x20,0x28,0x20,0x20,0x20,0x00,
-	0x08,0x60,0x60,0x60,0x60,0x60,0x60,0x00,
-	0x00,0x70,0x78,0x78,0x78,0x70,0x78,0x00,
-	0x07,0x08,0x00,0x00,0x07,0x00,0x00,0x08,
-	0x08,0x00,0x00,0x08,0x00,0x08,0x00,0x00,
-	0x08,0x00,0x00
+    0x06,0x00,0x00,0x06,0x00,0x01,0x00,0x00,
+    0x10,0x00,0x03,0x06,0x00,0x06,0x02,0x10,
+    0x04,0x45,0x45,0x45,0x45,0x05,0x05,0x05,
+    0x05,0x35,0x30,0x00,0x50,0x60,0x00,0x00,
+    0x00,0x20,0x28,0x38,0x50,0x50,0x00,0x00,
+    0x00,0x30,0x30,0x30,0x50,0x50,0x00,0x00,
+    0x08,0x20,0x20,0x28,0x20,0x20,0x20,0x00,
+    0x08,0x60,0x60,0x60,0x60,0x60,0x60,0x00,
+    0x00,0x70,0x78,0x78,0x78,0x70,0x78,0x00,
+    0x07,0x08,0x00,0x00,0x07,0x00,0x00,0x08,
+    0x08,0x00,0x00,0x08,0x00,0x08,0x00,0x00,
+    0x08,0x00,0x00
 };
-
 
 
 /**
@@ -294,6 +338,7 @@ unsigned xformat(void (*outchar)(void *,char),void *arg,const char * fmt,...)
     va_start(list,fmt);
     count = xvformat(outchar,arg,fmt,list);
     va_end(list);
+
     (void)list;
     
     return count;
@@ -311,25 +356,20 @@ static char toUpperCase(char c)
 }
 
 /**
- * Safe version of strlen() if a null pointer is passed return 0.
+ * We do not want use any library function.
  *
  * @param s - C  string
  * @return The length of the string
 */
 static unsigned xstrlen(const char *s)
 {
-    unsigned count = 0;
-    
-    if (s != 0)
+    const char *i;
+            
+    for (i = s ; *i ; i++)
     {
-        while (*s)
-        {
-            s++;
-            count++;
-        }
     }
-
-    return count;
+    
+    return i - s ;
 }
 
 static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char *buffer,int len,unsigned flags)
@@ -342,7 +382,9 @@ static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char
         if (flags  & FLAG_UPPER) 
         {
             (*myoutchar)(arg,toUpperCase(buffer[i]));
-        } else {
+        }
+        else
+        {
             (*myoutchar)(arg,buffer[i]);
         }
         count++;
@@ -366,6 +408,7 @@ static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int
 }
 
 
+
 /*
  * Lint want declare list as const but list is an obscured pointer so
  * the warning is disabled.
@@ -386,7 +429,11 @@ static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int
  * Supported flags :
  * 
  * - l  With integer number the argument will be of type long.
- * 
+ * -    Space for positive integer a space will be added before.
+ * - +  A + sign prefix positive number.
+ * - #  A prefix will be printed (o for octal,0x for hex,0b for binary)
+ * - 0  Value will be padded with zero (default is spacwe)
+ * - -  Left justify as default filed have rigth justification.
  * 
  * Supported type :
  * 
@@ -402,7 +449,7 @@ static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int
  * - p  Pointer will be emitted with the prefix ->
  * - P  Pointer in upper case letter.
  * - f  Floating point number.
- * - B	Boolean value printed as True / False.
+ * - B  Boolean value printed as True / False.
  *
  * @param outchar - Pointer to the function to output one char.
  * @param arg   - Argument for the output function.
@@ -418,9 +465,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
     int cc;
     char c;
     /*
-     * Maximum size of one int in binary format .. + 1 (in 64 bit machine)
+     * Maximum size of one long int in binary format with prefix + 1
      */
-    char buffer[65];
+    char buffer[sizeof(unsigned long)*8+1];
     char prefix[2] = {0,0};
     int prefixlen = 0;
     int width = 0 ,prec = 0;
@@ -429,7 +476,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
     int length=0 ;
     char * out = buffer;
     unsigned long value = 0;
-	int padding;
+    int padding;
 #if XCFG_FORMAT_FLOAT
     double dbl;
     unsigned long dPart;
@@ -438,11 +485,11 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 #endif
 
 #if VA_COPY
-	va_list args;
+    va_list args;
     
     va_copy(args,_args);
 #else
-#define	args	_args
+#define args    _args
 #endif
 
     while (*fmt)
@@ -454,7 +501,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
         else
             cc = formatStates[c - ' '] & 0x0F;
         
-        state = formatStates[cc * 8 + state] >> 4;
+        state = formatStates[(cc << 3) + state] >> 4;
 
 
         switch (state)
@@ -505,11 +552,20 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                 {
                     default:
                         break;
-                    case    '-':
+                    case  '-':
                         flags |= FLAG_LEFT;
                         break;
-                    case    '0':
+                    case  '0':
                         flags |= FLAG_ZERO;
+                        break;
+                    case ' ':
+                        flags |= FLAG_BLANK;
+                        break;
+                    case '#':
+                        flags |= FLAG_PREFIX;
+                        break;
+                    case '+':
+                        flags |= FLAG_PLUS;
                         break;
                 }
                 break;
@@ -531,15 +587,16 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                         /*lint -fallthrough */
                         
                         /*
-                         * Pointer we assume sizeof(int) == sizeof(void *)
+                         * Pointer 
                          */
                     case    'p':
-                        flags |= FLAG_INTEGER;
+                        flags |= FLAG_INTEGER|FLAG_VALUE;
                         radix = 16;
                         prec = sizeof(void *) * 2;
                         prefix[0] = '-';
                         prefix[1] = '>';
                         prefixlen = 2;
+                        value = (unsigned long)(va_arg(args,void *));
                         break;
                         
                         /*
@@ -548,6 +605,12 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                     case    'b':
                         flags |= FLAG_INTEGER;
                         radix = 2;
+                        if (flags & FLAG_PREFIX)
+                        {
+                            prefix[0] = '0';
+                            prefix[1] = 'b';
+                            prefixlen = 2;
+                        }
                         break;
 
                         /*
@@ -556,14 +619,20 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                     case    'o':
                         flags |= FLAG_INTEGER;
                         radix = 8;
+                        if (flags & FLAG_PREFIX)
+                        {
+                            prefix[0] = '0';
+                            prefixlen = 1;
+                        }
                         break;
 
                         /*
                          * Hex number upper case letter.
                          */
                     case    'X':
-                    	/* no break */
+                        /* no break */
                         flags |= FLAG_UPPER;
+                        
                         /* no break */
 
                         /* lint -fallthrough */
@@ -574,6 +643,12 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                     case    'x':
                         flags |= FLAG_INTEGER;
                         radix = 16;
+                        if (flags & FLAG_PREFIX)
+                        {
+                            prefix[0] = '0';
+                            prefix[1] = 'x';
+                            prefixlen = 2;
+                        }
                         break;
 
                         /*
@@ -634,7 +709,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                          */
                    case 'f':
                         if ((flags & FLAG_PREC) == 0)
+                        {
                             prec = 6;
+                        }
                         dbl = va_arg(args,double);
                         arr = 0.51;
                         for (i = 0 ; i < prec ; i++)
@@ -653,7 +730,6 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                             value = (long)dbl;
                             dbl -= (long)value;
                         }
-                        
                         
                         
                         for (i = 0 ;i < prec  ;i++)
@@ -683,10 +759,10 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                          * Boolean value
                          */
                     case 'B':
-                    	if (va_arg(args,int) != 0)
-                    		out = (char*)ms_true;
-                    	else
-                    		out = (char*)ms_false;
+                        if (va_arg(args,int) != 0)
+                            out = (char*)ms_true;
+                        else
+                            out = (char*)ms_false;
 
                         length = (int)xstrlen(out);
                         break;
@@ -708,51 +784,67 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                         {
                             value = (long)va_arg(args,long);
                         }
-						else
-						{
-							if (flags & FLAG_DECIMAL)
-								value = (long)va_arg(args,int);
-							else
-								value = (long)va_arg(args,unsigned int);
-						}
+                        else
+                        {
+                            if (flags & FLAG_DECIMAL)
+                                value = (long)va_arg(args,int);
+                            else
+                                value = (long)va_arg(args,unsigned int);
+                        }
                     }
 
-
+                    if ((flags & FLAG_PREFIX) && value == 0)
+                    {
+                        prefixlen = 0;
+                    }
+                    
                     if (flags & FLAG_DECIMAL)
                     {
                         if (((long)value) < 0)
                         {
                             value = ~value + 1;
                             flags |= FLAG_MINUS;
+                            
+                        }
+                        else if (flags & FLAG_BLANK)
+                        {
+                            prefix[0] = ' ';
+                            prefixlen = 1;
                         }
                     }
 
                     if ((flags & FLAG_BUFFER) == 0)
+                    {
                         out = buffer + sizeof(buffer) - 1;
+                    }
 
                     while (prec -- > 0 || value)
                     {
                         *out -- = ms_digits[(unsigned long)value % radix];
                         value /= radix;
                         length ++;
-                    };
+                    }
 
                     out++;
 
-                    if (flags & FLAG_MINUS)
+                    /*
+                     * Check if a sign is required
+                     */
+                    if (flags & (FLAG_MINUS | FLAG_PLUS))
                     {
+                        c = flags & FLAG_MINUS ? '-' : '+';
+                        
                         if (flags & FLAG_ZERO)
                         {
                             prefixlen = 1;
-                            prefix[0] = '-';
+                            prefix[0] = c;
                         }
                         else
                         {
-                            *--out = '-';
+                            *--out = c;
                             length++;
                         }
                     }
-
                 }
 
                 if (width && length > width)
@@ -762,9 +854,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
                 
                 padding = width - (length + prefixlen);
 
-                
-                
-                count += outBuffer(outchar,arg,prefix,prefixlen,0);
+                count += outBuffer(outchar,arg,prefix,prefixlen,flags);
                 if (!(flags & FLAG_LEFT))
                     count += outChars(outchar,arg,flags & FLAG_ZERO ? '0' : ' ' , padding);
                 count += outBuffer(outchar,arg,out,length,flags);
@@ -773,8 +863,10 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
         }
     }
-    
+
+#if VA_COPY
     va_end(args);
+#endif
     
     return count;
 }
@@ -788,7 +880,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <stdbool.h>
 static void myPutchar(void *arg,char c)
 {
     char ** s = (char **)arg;
@@ -801,53 +893,86 @@ static void myPrintf(char *buf,const char *fmt,va_list args)
     *buf = 0;
 }
 
+
 static void testFormat(const char * fmt,...)
 {
     char buf1[1024];
     char buf2[1024];
-    va_list args;
     va_list list;
+#if VA_COPY
+    va_list args;
+
     va_start(args,fmt);
+#else
+    va_start(list,fmt);
+#endif
 
+#if VA_COPY
     va_copy(list,args);
+#endif
+    
     myPrintf(buf1,fmt,list);
-    va_end(list);
 
-    va_copy(list,args);
-    vsprintf(buf2,fmt,args);
+#if VA_COPY
     va_end(list);
+#endif
+    if
+            (*fmt != '*')
+    {
+#if VA_COPY
+        va_copy(list,args);
+#endif
+        vsprintf(buf2,fmt,args);
 
+#if VA_COPY
+        va_end(list);
+#endif
+        
+
+        printf("'%s'\n'%s'\n",buf1,buf2);
+        if (strcmp(buf1,buf2))
+        {
+            printf("Error in '%s'\n",fmt);
+            exit(1);
+        }
+    }
+    else
+    {
+        printf("'%s'\n",buf1);
+    }
+    
     va_end(args);
     (void)args;
-
-    printf("'%s'\n'%s'\n",buf1,buf2);
-    if (strcmp(buf1,buf2))
-    {
-        printf("Error in '%s'\n",fmt);
-        exit(1);
-    }
-
     
 }
 
 int main(void)
 {
     printf("XFORMATC test\n\n");
-    testFormat("Hello world");
+    testFormat("Hello world %u",sizeof(unsigned long));
     testFormat("Hello %s","World");
-    testFormat("integer %05d %d %d",-7,7,-7);
+    testFormat("integer %05d %+d %d",-7,7,-7);
     testFormat("Unsigned %u %lu",123,123Lu);
     testFormat("Octal %o %lo",123,123456L);
     testFormat("Hex %x %X %lX",0x1234,0xf0ad,0xf2345678L);
     testFormat("String %4.4s","Large");
     testFormat("String %*.*s",4,4,"Hello");
+    testFormat("Hex with prefix %#x %#X %#08x",1,2,12345678);
+    testFormat("Octal with prefix %#o %#o",0,5);
+    testFormat("Integer blank % d % d",1,-1);
+    testFormat("Special char %%");
 #if XCFG_FORMAT_FLOAT
     
     testFormat("Floating %6.2f",22.0/7.0);
     testFormat("Floating %6.2f",-22.0/7.0);
-    testFormat("Floating %6.1f %6.2f",3.999,-3.999);
+    testFormat("Floating %+6.1f %6.2f",3.999,-3.999);
     testFormat("Floating %6.1f %6.0f",3.999,-3.999);
 #endif
+
+    testFormat("*Binary number %b %#b",5,6);
+    testFormat("*Pointer %p %P",(void *)0x12345678,(void *)0x87654321);
+    testFormat("*boolean %B %B",true,false);
+    
     printf("Test completed succesfuylly\n"); 
 
     return 0;
