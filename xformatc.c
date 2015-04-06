@@ -1,7 +1,7 @@
 /**
- * @file        xformatc.c
+ * @file	xformatc.c
  *
- * @brief       Printf C implementation.
+ * @brief	Printf C implementation.
  *
  * Tested wuth the following operating systems / compilers :
  *
@@ -13,140 +13,233 @@
  * - GCC wiith embedded ARM.
  * - Linux armel
  * - HCS08 with Freescale compiler.
- * - SDCC
+ * - SDCC (Z80 and 8051)
  * 
- * @author      Mario Viara
+ * @author	Mario Viara
  * 
- * @version     1.06
+ * @version	1.06
  * 
- * @copyright   Copyright Mario Viara 2014  - License Open Source (LGPL)
+ * @copyright	Copyright Mario Viara 2014	- License Open Source (LGPL)
  * This is a free software and is opened for education, research and commercial
  * developments under license policy of following terms:
  * - This is a free software and there is NO WARRANTY.
  * - No restriction on use. You can use, modify and redistribute it for personal,
- *   non-profit or commercial product UNDER YOUR RESPONSIBILITY.
+ *	 non-profit or commercial product UNDER YOUR RESPONSIBILITY.
  * - Redistributions of source code must retain the above copyright notice.
  *
  */
 
 #include  "xformatc.h"
 
+#ifdef DEBUG
+#include <assert.h>
+#endif
 
 /**
- * Detect the largerst integer type of the system
+ * SDCC support only float
  */
-#ifdef _MSC_VER
-#ifdef _M_AMD64
-#define	LARGEST_INT	__int64
+#ifdef __SDCC
+#define DOUBLE	float
 #endif
-#endif
-
 
 /**
  * Default largest int to long
  */
-#ifndef	LARGEST_INT
-#define	LARGEST_INT	long
+#ifndef	LONG
+#define	LONG	long
 #endif
 
 /**
- * Detect support for va_copy this macro must be called for example
- * in X64 machine to adjust the stack frame when an argument of va_list
- * is passed over functions.
+ * Defined the double type if not defined
  */
-#ifdef  __GNUC__
-#define VA_COPY 1
+#ifndef DOUBLE
+#define DOUBLE	double
 #endif
 
-#ifndef VA_COPY
-#define VA_COPY 0
+
+/**
+ * Defaul long long type
+ */
+#ifndef LONGLONG
+#define LONGLONG   long long
 #endif
 
 /**
- * Define XCFG_FORMAT_FLOAT=0 to remove floating point support
+ * Structure with all parameter used
  */
-#ifndef XCFG_FORMAT_FLOAT
-#define XCFG_FORMAT_FLOAT    1
-#endif
-
-enum 
+struct param_s
 {
-    /* The argument is long integer */
-    FLAG_LONG       = 0x00000001,
+	/**
+	 * Buffer for current intger value
+	 */
+	union
+	{
+		unsigned LONG		lvalue;
+#if XCFG_FORMAT_LONGLONG
+		unsigned LONGLONG	llvalue;
+#endif
+	} values;
 
-    /* The field is filled with '0' */
-    FLAG_ZERO       = 0x00000004,
+	/**
+	 * Pointer to the outut buffer
+	 */
+	char*		out;
 
-    /* The field is filled with ' ' */
-    FLAG_SPACE      = 0x00000008,
+	/**
+	 * Current lenght of the output buffer
+	 */
+	int		length;
 
-    /* Left alignment */
-    FLAG_LEFT       = 0x00000010,
+	/**
+	 * Field precision
+	 */
+	int		prec;
 
-    /* Decimal field */
-    FLAG_DECIMAL    = 0x00000020,
+	/**
+	 * Field width
+	 */
+	int		width;
 
-    /* Integer field */
-    FLAG_INTEGER    = 0x00000040,
+	/**
+	 * Length of the prefix
+	 */
+	int		prefixlen;
 
-    /* Output in upper case letter */
-    FLAG_UPPER      = 0x00000080,
+	/**
+	 * Count the number of char emitted
+	 */
+	unsigned	count;
 
-    /* Field is negative */
-    FLAG_MINUS      = 0x00000100,
+	/**
+	 * Current state
+	 */
+	int		state;
 
-    /* Precision set */
-    FLAG_PREC       = 0x00000200,
+	/**
+	 * Current number of padding
+	 */
+	int		padding;
 
-    /* Value set */
-    FLAG_VALUE      = 0x00000400,
-    
-    /* Buffer set */
-    FLAG_BUFFER     = 0x00000800,
+	/**
+	 * Union with all flags
+	 */
+	union
+	{
 
-    /* Prefix required */
-    FLAG_PREFIX     = 0x00001000,
+		unsigned flags;
 
-    /* Blank before positive integer number */
-    FLAG_BLANK      = 0x00002000,
+		struct
+		{
+			/* Type of integer field */
+			unsigned	fl_type:2;
 
-    /* force a + before positive number */
-    FLAG_PLUS       = 0x00004000,
+#define FLTYPE_INT		0
+#define FLTYPE_LONG		1
+#define FLTYPE_SIZEOF		2
+#define FLTYPE_LONGLONG		3
 
-	/* Number is size_t */
-	FLAG_SIZEOF		= 0x00008000
+			/* Precision set */
+			unsigned	fl_prec:1;
 
-                      
+
+			/* Left alignment */
+			unsigned	fl_left:1;
+
+			/* Blank before positive integer number */
+			unsigned	fl_blank:1;
+
+			/* Prefix required */
+			unsigned	fl_prefix:1;
+
+			/* force a + before positive number */
+			unsigned	fl_plus:1;
+
+			/* Output in upper case letter */
+			unsigned	fl_upper:1;
+
+			/* Decimal field */
+			unsigned	fl_decimal:1;
+
+			/* Integer field */
+			unsigned	fl_integer:1;
+
+			/* Field is negative */
+			unsigned	fl_minus:1;
+
+
+			/* Value set */
+			unsigned	fl_value:1;
+
+			/* Buffer set */
+			unsigned	fl_buffer:1;
+
+		} flag;
+	} flags;
+
+	/* Buffer to store the filed prefix */
+	char prefix[2];
+
+	/* Radix for ascii conversion */
+	unsigned char	radix;
+
+	/* char used for padding */
+	char		pad;
+
+	/** Buffer to store the biggest integer number in binary */
+#if XCFG_FORMAT_LONGLONG
+	char		buffer[sizeof(LONGLONG)*8+1];
+#else
+	char		buffer[sizeof(LONG)*8+1];
+#endif
+
+#if XCFG_FORMAT_FLOAT
+	/**
+	 * Floating pint argument
+	 */
+	DOUBLE		dbl;
+
+	/**
+	 * Fractional part of floating point
+	 */
+	unsigned LONG	fPart;
+
+	/**
+	 * Used to round the floating point number
+	 */
+	DOUBLE		arr;
+#endif
+
 };
+
 
 /**
  * Enum for the internal state machine
  */ 
 enum State
 {
-    /* Normal state outputting literal */
-    ST_NORMAL = 0,
-    
-    /* Just read % */
-    ST_PERCENT = 1,
-    
-    /* Just read flag */
-    ST_FLAG = 2,
-    
-    /* Just read the width */
-    ST_WIDTH = 3,
-    
-    /* Just read '.' */
-    ST_DOT= 4,
-    
-    /* Just read the precision */
-    ST_PRECIS = 5,
-    
-    /* Just  read the size */
-    ST_SIZE = 6,
-    
-    /* Just read the type specifier */
-    ST_TYPE = 7 
+	/* Normal state outputting literal */
+	ST_NORMAL = 0,
+
+	/* Just read % */
+	ST_PERCENT = 1,
+
+	/* Just read flag */
+	ST_FLAG = 2,
+
+	/* Just read the width */
+	ST_WIDTH = 3,
+
+	/* Just read '.' */
+	ST_DOT= 4,
+
+	/* Just read the precision */
+	ST_PRECIS = 5,
+
+	/* Just	 read the size */
+	ST_SIZE = 6,
+
+	/* Just read the type specifier */
+	ST_TYPE = 7 
 };
 
 /**
@@ -154,157 +247,30 @@ enum State
  */ 
 enum CharClass
 {
-    /* Other char */
-    CH_OTHER = 0,
-    /* The % char */
-    CH_PERCENT = 1,
-    /* The . char */
-    CH_DOT = 2,
-    /* The * char */
-    CH_STAR = 3,
-    /* The 0 char */
-    CH_ZERO = 4,
-    /* Digit 0-9 */
-    CH_DIGIT = 5,
-    /* Flag chars */
-    CH_FLAG = 6,
-    /* Size chars */
-    CH_SIZE = 7,
-    /* Type chars */
-    CH_TYPE = 8
+	/* Other char */
+	CH_OTHER = 0,
+	/* The % char */
+	CH_PERCENT = 1,
+	/* The . char */
+	CH_DOT = 2,
+	/* The * char */
+	CH_STAR = 3,
+	/* The 0 char */
+	CH_ZERO = 4,
+	/* Digit 0-9 */
+	CH_DIGIT = 5,
+	/* Flag chars */
+	CH_FLAG = 6,
+	/* Size chars */
+	CH_SIZE = 7,
+	/* Type chars */
+	CH_TYPE = 8
 };
 
 
-/**
- * Define XCFG_FORMAT_MAKE to build the states[] table.
-*/
-#ifdef  XCFG_FORMAT_MAKE
-#include <stdio.h>
-static const unsigned states[] =
-{
-/* CHAR         NORMAL  PERCENT  FLAG   WIDTH     DOT  PRECIS    SIZE    TYPE*/
-/* OTHER    */      0,      0,      0,      0,      0,      0,      0,      0,
-/* PERCENT  */      1,      0,      0,      0,      0,      0,      0,      1,
-/* DOT      */      0,      4,      4,      4,      4,      0,      0,      0,
-/* STAR     */      0,      3,      3,      0,      5,      6,      0,      0,
-/* ZERO     */      0,      2,      2,      3,      5,      5,      0,      0,
-/* DIGIT    */      0,      3,      3,      3,      5,      5,      0,      0,
-/* FLAG     */      0,      2,      2,      2,      2,      2,      2,      0,
-/* SIZE     */      0,      6,      6,      6,      6,      6,      6,      0,
-/* TYPE     */      0,      7,      7,      7,      7,      7,      7,      0,
-};
-
-static unsigned table['z' - ' ' + 1];
-#define N (sizeof(table)/sizeof(unsigned))
-
-
-void make(void)
-{
-    int c,i;
-    int cl;
-
-    for (i = 0;  i < N ; i++)
-    {
-        c = ' ' + i;
-        switch (c)
-        {
-            case    '.':
-                cl = CH_DOT;
-                break;
-                
-            case    'l':
-            case    'h':
-			case	'z':
-                cl = CH_SIZE;
-                break;
-            case    ' ':
-            case    '-':
-            case    '#':
-            case    '+':
-                cl = CH_FLAG;
-                break;
-                
-            case    '0':
-                cl = CH_ZERO;
-                break;
-            case    '1':
-            case    '2':
-            case    '3':
-            case    '4':
-            case    '5':
-            case    '6':
-            case    '7':
-            case    '8':
-            case    '9':
-                cl = CH_DIGIT;
-                break;
-            case    '%':
-                cl = CH_PERCENT;
-                break;
-            case    '*':
-                cl = CH_STAR;
-                break;
-
-            case    'd':
-            case    'i':
-            case    'S':
-            case    's':
-            case    'b':
-            case    'x':
-            case    'X':
-            case    'o':
-            case    'u':
-            case    'c':
-            case    'C':
-            case    'p':
-            case    'P':
-            case    'f':
-            case    'B':
-                cl = CH_TYPE;
-                break;
-
-            default:
-                cl = CH_OTHER;
-                break;
-        }
-
-        table[i] = cl;
-
-        if (i < sizeof(states)/sizeof(unsigned))
-            table[i] = table[i] | (states[i] << 4);
-    }
-
-    printf("static const unsigned char formatStates[] =\n{\n");
-
-    for (i = 0;  i < N ; i++)
-    {
-        if (i % 8 == 0)
-            printf("\t");
-        printf("0x%02X",table[i] & 0xff);
-        if (i + 1 < N)
-            printf(",");
-        if ((i+1) % 8 == 0)
-            printf("\n");
-    }
-    printf("\n};\n\n");
-}
-
-
-int main(int argc,char **argv)
-{
-    make();
-}
-
-#else
-
 
 /**
- * Used to convert integer
- */
-static const char ms_digits[] = "0123456789abcdef";
-
-/**
- * String used when %s as null parameter
+ * String used when %s is a null parameter
  */
 static const char  ms_null[] = "(null)";
 /*
@@ -320,7 +286,7 @@ static const char  ms_false[]= "False";
 
 /*
  * This table contains the next state for all char and it will be
- * generated compiling this file with the option -DXCFG_FORMAT_MAKE
+ * generatet using xformattable.c
  */
 
 static const unsigned char formatStates[] =
@@ -342,12 +308,130 @@ static const unsigned char formatStates[] =
 
 
 /**
+ * Convert an unsigned value in one string
+ *
+ * All parameter are in the passwd structure
+ */
+static void ulong2a(struct param_s * param)
+{
+	char digit;
+
+	while (param->prec -- > 0 ||  param->values.lvalue)
+	{
+		switch (param->radix)
+		{
+			case 2:
+				digit = (char)((param->values.lvalue & 0x01) + '0');
+				param->values.lvalue >>= 1;
+				break;
+
+			case 8:
+				digit = (char)((param->values.lvalue & 0x07) + '0');
+				param->values.lvalue >>= 3;
+				break;
+
+			case 16:
+				digit = (char)((param->values.lvalue & 0x0F)+'0');
+				param->values.lvalue >>= 4;
+				break;
+			default:
+			case 10:
+				digit = (char)((param->values.lvalue % 10) + '0');
+				param->values.lvalue /= 10;
+				break;
+#if 0		   
+			default:
+				digit = (char)((param->values.lvalue % param->radix) + '0');
+				param->values.lvalue /= param->radix;
+				break;
+#endif
+		}
+
+		/**
+		 * Conversion for digit >= 10 in letters a .. z
+		 */
+		if (digit >= '0'+10)
+		{
+			digit += 39;
+		}
+
+		*param->out -- = digit;
+		param->length ++;
+
+#ifdef DEBUG
+		assert(param->length < (int)sizeof(param->buffer));
+#endif
+
+
+	}
+
+}
+
+
+#if XCFG_FORMAT_LONGLONG
+#ifdef XCFG_FORMAT_LONG_ARE_LONGLONG
+#define	ullong2a	ulong2a
+#else
+static void ullong2a(struct param_s * param)
+{
+	char digit;
+
+	while (param->prec -- > 0 ||  param->values.llvalue)
+	{
+		switch (param->radix)
+		{
+			case 2:
+				digit = (char)((param->values.llvalue & 0x01) + '0');
+				param->values.llvalue >>= 1;
+				break;
+
+			case 8:
+				digit = (char)((param->values.llvalue & 0x07) + '0');
+				param->values.llvalue >>= 3;
+				break;
+
+			case 16:
+				digit = (char)((param->values.llvalue & 0x0F)+'0');
+				param->values.llvalue >>= 4;
+				break;
+			default:
+			case 10:
+				digit = (char)((param->values.llvalue % 10) + '0');
+				param->values.llvalue /= 10;
+				break;
+#if 0
+			default:
+				digit = (char)((param->values.llvalue % param->radix) + '0');
+				param->values.llvalue /= param->radix;
+				break;
+#endif
+		}
+
+		if (digit >= '0'+10)
+		{
+			digit += 39;
+		}
+
+		*param->out -- = digit;
+		param->length ++;
+
+#ifdef DEBUG
+		assert(param->length < (int)sizeof(param->buffer));
+#endif
+
+	}
+
+}
+#endif
+#endif
+
+/**
  * Printf like using variable arguments.
  * 
  * @param outchar - Pointer to the function to output one new char.
- * @param arg   - Argument for the output function.
- * @param fmt   - Format options for the list of parameters.
- * @param ...   - Arguments
+ * @param arg	- Argument for the output function.
+ * @param fmt	- Format options for the list of parameters.
+ * @param ...	- Arguments
  *
  * @return The number of char emitted.
  * 
@@ -355,79 +439,70 @@ static const unsigned char formatStates[] =
  */
 unsigned xformat(void (*outchar)(void *,char),void *arg,const char * fmt,...)
 {
-    va_list list;
-    unsigned count;
-    
-    va_start(list,fmt);
-    count = xvformat(outchar,arg,fmt,list);
-    va_end(list);
+	va_list list;
+	unsigned count;
 
-    (void)list;
-    
-    return count;
+	va_start(list,fmt);
+	count = xvformat(outchar,arg,fmt,list);
+	va_end(list);
+
+	(void)list;
+
+	return count;
 }
 
-/**
- * Internal function to convert a char in upper case.
- *
- * @param c - A char
- * @return The upper case if was in lower case.
- */
-static char toUpperCase(char c)
-{
-    return (char)(c >= 'a' && c <= 'z' ? c - ('a' - 'A') : c);
-}
 
 /**
  * We do not want use any library function.
  *
- * @param s - C  string
+ * @param s - C	 string
  * @return The length of the string
-*/
+ */
 static unsigned xstrlen(const char *s)
 {
-    const char *i;
-            
-    for (i = s ; *i ; i++)
-    {
-    }
-    
-    return i - s ;
+	const char *i;
+
+	for (i = s ; *i ; i++)
+	{
+	}
+
+	return (unsigned)(i - s);
 }
 
-static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char *buffer,int len,unsigned flags)
+static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char *buffer,int len,unsigned char toupper)
 {
-    unsigned count = 0;
-    int i;
-    
-    for (i = 0; i < len ; i++)
-    {
-        if (flags  & FLAG_UPPER) 
-        {
-            (*myoutchar)(arg,toUpperCase(buffer[i]));
-        }
-        else
-        {
-            (*myoutchar)(arg,buffer[i]);
-        }
-        count++;
-    }
+	unsigned count = 0;
+	int i;
+	char c;
 
-    return count;
+	for (i = 0; i < len ; i++)
+	{
+		c = buffer[i];
+
+		if (toupper && (c >= 'a' && c <= 'z'))
+		{
+			c -= 'a' - 'A';
+		}
+
+		(*myoutchar)(arg,c);
+		count++;
+	}
+
+	return count;
 }
 
 
 static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int len)
 {
-    unsigned count= 0;
+	unsigned count= 0;
 
-    while (len-- > 0)
-    {
-        (*myoutchar)(arg,ch);
-        count++;
-    }
+	while (len-- > 0)
+	{
+		(*myoutchar)(arg,ch);
+		count++;
+	}
 
-    return count;
+	return count;
 }
 
 
@@ -437,6 +512,7 @@ static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int
  * the warning is disabled.
  */
 /*lint -save -e818 */
+
 
 /**
  * Printf like format function.
@@ -451,607 +527,510 @@ static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int
  * 
  * Supported flags :
  * 
- * - l  With integer number the argument will be of type long.
- * -    Space for positive integer a space will be added before.
- * - z  Compatible with C99 the argument is size_t (aka sizeof(void *))
- * - +  A + sign prefix positive number.
- * - #  A prefix will be printed (o for octal,0x for hex,0b for binary)
- * - 0  Value will be padded with zero (default is spacwe)
- * - -  Left justify as default filed have rigth justification.
+ * - l	With integer number the argument will be of type long.
+ * - ll With integer number the argument will be of type long long.
+ * -	Space for positive integer a space will be added before.
+ * - z	Compatible with C99 the argument is size_t (aka sizeof(void *))
+ * - +	A + sign prefix positive number.
+ * - #	A prefix will be printed (o for octal,0x for hex,0b for binary)
+ * - 0	Value will be padded with zero (default is spacwe)
+ * - -	Left justify as default filed have rigth justification.
  * 
  * Supported type :
  * 
- * - s  Null terminated string of char.
- * - S  Null terminated string of char in upper case.
- * - i  Integer number.
- * - d  Integer number.
- * - u  Unsigned number.
- * - x  Unsigned number in hex.
- * - X  Unsigned number in hex upper case.
- * - b  Binary number
- * - o  Octal number
- * - p  Pointer will be emitted with the prefix ->
- * - P  Pointer in upper case letter.
- * - f  Floating point number.
- * - B  Boolean value printed as True / False.
+ * - s	Null terminated string of char.
+ * - S	Null terminated string of char in upper case.
+ * - i	Integer number.
+ * - d	Integer number.
+ * - u	Unsigned number.
+ * - x	Unsigned number in hex.
+ * - X	Unsigned number in hex upper case.
+ * - b	Binary number
+ * - o	Octal number
+ * - p	Pointer will be emitted with the prefix ->
+ * - P	Pointer in upper case letter.
+ * - f	Floating point number.
+ * - B	Boolean value printed as True / False.
  *
  * @param outchar - Pointer to the function to output one char.
- * @param arg   - Argument for the output function.
- * @param fmt   - Format options for the list of parameters.
- * @param args  -List parameters.
+ * @param arg	- Argument for the output function.
+ * @param fmt	- Format options for the list of parameters.
+ * @param args	-List parameters.
  *
  * @return The number of char emitted.
  */
 unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_list _args)
 {
-    unsigned count = 0;
-    int state = 0;
-    int cc;
-    char c;
-    /*
-     * Maximum size of one long int in binary format with prefix + 1
-     */
-    char buffer[sizeof(LARGEST_INT)*8+1];
-    char prefix[2] = {0,0};
-    int prefixlen = 0;
-    int width = 0 ,prec = 0;
-    unsigned  flags = 0;
-    unsigned radix = 2;
-    int length=0 ;
-    char * out = buffer;
-    unsigned LARGEST_INT value = 0;
-    int padding;
-#if XCFG_FORMAT_FLOAT
-    double dbl;
-    unsigned long dPart;
-    int i;
-    double arr;
-#endif
+	XCFG_FORMAT_STATIC struct param_s param;
+	unsigned char i;
+	char c;
 
-#if VA_COPY
-    va_list args;
-    
-    va_copy(args,_args);
+#if XCFG_FORMAT_VA_COPY
+	va_list args;
+
+	va_copy(args,_args);
 #else
-#define args    _args
+#define args	_args
 #endif
 
-    while (*fmt)
-    {
-        c = *fmt++;
 
-        if (c < ' ' || c > 'z')
-            cc = (int)CH_OTHER;
-        else
-            cc = formatStates[c - ' '] & 0x0F;
-        
-        state = formatStates[(cc << 3) + state] >> 4;
+	param.count = 0;
+	param.state = ST_NORMAL;
+
+	while (*fmt)
+	{
+		c = *fmt++;
+
+		if (c < ' ' || c > 'z')
+			i = (int)CH_OTHER;
+		else
+			i = formatStates[c - ' '] & 0x0F;
+
+		param.state = formatStates[(i << 3) + param.state] >> 4;
 
 
-        switch (state)
-        {
-            default:
-            case    ST_NORMAL:
-                (*outchar)(arg,c);
-                count++;
-                break;
-                
-            case    ST_PERCENT:
-                prefixlen = width = prec = 0;
-                flags = 0;
-                length = 0;
-                break;
+		switch (param.state)
+		{
+			default:
+			case	ST_NORMAL:
+				(*outchar)(arg,c);
+				param.count++;
+				break;
 
-            case    ST_WIDTH:
-                if (c == '*')
-                    width = (int)va_arg(args,int);
-                else
-                    width = width * 10 + (c - '0');
-                break;
-                
-            case    ST_DOT:
-                break;
+			case	ST_PERCENT:
+				param.length = param.prefixlen = param.width = param.prec = 0;
+				param.flags.flags = 0;
+				param.pad = ' ';
+				break;
 
-            case    ST_PRECIS:
-                flags |= FLAG_PREC;
-                if (c == '*')
-                    prec = (int)va_arg(args,int);
-                else
-                    prec = prec * 10 + (c - '0');
-                break;
+			case	ST_WIDTH:
+				if (c == '*')
+					param.width = (int)va_arg(args,int);
+				else
+					param.width = param.width * 10 + (c - '0');
+				break;
 
-            case    ST_SIZE:
-                switch (c)
-                {
-                    default:
-                        break;
-                    case    'l':
-                        flags |= FLAG_LONG;
-                        break;
-					case 'z':
-						flags |= FLAG_SIZEOF;
+			case	ST_DOT:
+				break;
+
+			case	ST_PRECIS:
+				param.flags.flag.fl_prec = 1;
+				if (c == '*')
+					param.prec = (int)va_arg(args,int);
+				else
+					param.prec = param.prec * 10 + (c - '0');
+				break;
+
+			case	ST_SIZE:
+				switch (c)
+				{
+					default:
 						break;
-                }
-                break;
+					case 'z':
+						param.flags.flag.fl_type = FLTYPE_SIZEOF;
+						break;
 
-            case    ST_FLAG:
-                switch (c)
-                {
-                    default:
-                        break;
-                    case  '-':
-                        flags |= FLAG_LEFT;
-                        break;
-                    case  '0':
-                        flags |= FLAG_ZERO;
-                        break;
-                    case ' ':
-                        flags |= FLAG_BLANK;
-                        break;
-                    case '#':
-                        flags |= FLAG_PREFIX;
-                        break;
-                    case '+':
-                        flags |= FLAG_PLUS;
-                        break;
-                }
-                break;
-                
-            case    ST_TYPE:
-
-                switch (c)
-                {
-                    default:
-                        length = 0;
-                        break;
-                        
-                        /*
-                         * Pointer upper case
-                         */
-                    case    'P':
-                        flags |= FLAG_UPPER;
-                        /* no break */
-                        /*lint -fallthrough */
-                        
-                        /*
-                         * Pointer 
-                         */
-                    case    'p':
-                        flags |= FLAG_INTEGER|FLAG_VALUE;
-                        radix = 16;
-                        prec = sizeof(void *) * 2;
-                        prefix[0] = '-';
-                        prefix[1] = '>';
-                        prefixlen = 2;
-                        value = (unsigned LARGEST_INT)(va_arg(args,void *));
-                        break;
-                        
-                        /*
-                         * Binary number
-                         */
-                    case    'b':
-                        flags |= FLAG_INTEGER;
-                        radix = 2;
-                        if (flags & FLAG_PREFIX)
-                        {
-                            prefix[0] = '0';
-                            prefix[1] = 'b';
-                            prefixlen = 2;
-                        }
-                        break;
-
-                        /*
-                         * Octal number
-                         */
-                    case    'o':
-                        flags |= FLAG_INTEGER;
-                        radix = 8;
-                        if (flags & FLAG_PREFIX)
-                        {
-                            prefix[0] = '0';
-                            prefixlen = 1;
-                        }
-                        break;
-
-                        /*
-                         * Hex number upper case letter.
-                         */
-                    case    'X':
-                        /* no break */
-                        flags |= FLAG_UPPER;
-                        
-                        /* no break */
-
-                        /* lint -fallthrough */
-
-                        /*
-                         * Hex number lower case
-                         */
-                    case    'x':
-                        flags |= FLAG_INTEGER;
-                        radix = 16;
-                        if (flags & FLAG_PREFIX)
-                        {
-                            prefix[0] = '0';
-                            prefix[1] = 'x';
-                            prefixlen = 2;
-                        }
-                        break;
-
-                        /*
-                         * Integer number radix 10
-                         */
-                    case    'd':
-                    case    'i':
-                        flags |= FLAG_DECIMAL | FLAG_INTEGER;
-                        radix = 10;
-                        break;
-
-                        /*
-                         * Unsigned number
-                         */
-                    case    'u':
-                        flags |= FLAG_INTEGER;
-                        radix = 10;
-                        break;
-
-                        /*
-                         * Upper case string
-                         */
-                    case    'S':
-                        flags |= FLAG_UPPER;
-                        /* no break */
-                        /*lint -fallthrough */
-                        
-                        /*
-                         * Normal string
-                         */
-                    case    's':
-                        out = va_arg(args,char *);
-                        if (out == 0)
-                            out = (char *)ms_null;
-                        length = (int)xstrlen(out);
-                        break;
-
-                        /*
-                         * Upper case char
-                         */
-                    case    'C':
-                        flags |= FLAG_UPPER;
-                        /* no break */
-                        /* lint -fallthrough */
-
-                        /*
-                         * Char
-                         */
-                    case    'c':
-                        out = buffer;
-                        buffer[0] = (char)va_arg(args,int);
-                        length = 1;
-                        break;
-                        
-#if XCFG_FORMAT_FLOAT
-                        /**
-                         * Floating point number
-                         */
-                   case 'f':
-                        if ((flags & FLAG_PREC) == 0)
-                        {
-                            prec = 6;
-                        }
-                        dbl = va_arg(args,double);
-                        arr = 0.51;
-                        for (i = 0 ; i < prec ; i++)
-                            arr /= 10.0;
-
-                        if (dbl < 0)
-                        {
-                            dbl -= arr;
-                            value = (long)dbl;
-                            dbl -= (long)value;
-                            dbl = - dbl;
-                        }
-                        else
-                        {
-                            dbl += arr;
-                            value = (long)dbl;
-                            dbl -= (long)value;
-                        }
-                        
-                        
-                        for (i = 0 ;i < prec  ;i++)
-                            dbl *= 10.0;
-                        dPart = (unsigned long)dbl;
-                        
-                        out = buffer + sizeof(buffer) - 1;
-                        if (prec)
-                        {
-                            while (prec --)
-                            {
-                                *out -- = ms_digits[dPart % 10];
-                                dPart /= (unsigned)10;
-                                length ++;
-                            }
-
-                            *out -- = '.';
-                            length ++;
-                        }
-                        flags |= FLAG_INTEGER|FLAG_BUFFER|FLAG_DECIMAL|FLAG_VALUE;
-                        radix = 10;
-                        prec = 0;
-                        break;
-#endif
-                        
-                        /**
-                         * Boolean value
-                         */
-                    case 'B':
-                        if (va_arg(args,int) != 0)
-                            out = (char*)ms_true;
-                        else
-                            out = (char*)ms_false;
-
-                        length = (int)xstrlen(out);
-                        break;
-
-                        
-                }
-
-                /*
-                 * Process integer number
-                 */
-                if (flags & FLAG_INTEGER)
-                {
-                    if (prec == 0)
-                        prec = 1;
-
-                    if ((flags & FLAG_VALUE) == 0)
-                    {
-						if (flags & FLAG_SIZEOF)
+					case 'l':
+#if XCFG_FORMAT_LONGLONG
+						if (param.flags.flag.fl_type == FLTYPE_LONG)
 						{
-							if (flags & FLAG_DECIMAL)
-							{
-								value = va_arg(args,LARGEST_INT);
-							}
-							else
-							{
-								value = va_arg(args,unsigned LARGEST_INT);
-							}
+							param.flags.flag.fl_type = FLTYPE_LONGLONG;
 						}
-                        else if (flags & FLAG_LONG)
-                        {
-							if (flags & FLAG_DECIMAL)
-							{
-								value = va_arg(args,long);
-							}
-							else
-							{
-								value = (unsigned LARGEST_INT)va_arg(args,unsigned long);
-							}
-                        }
-                        else
-                        {
-							if (flags & FLAG_DECIMAL)
-							{
-								value = va_arg(args,int);
-							}
-							else
-							{
-								value = (unsigned LARGEST_INT)va_arg(args,unsigned int);
-							}
-                        }
+						else
+						{
+							param.flags.flag.fl_type = FLTYPE_LONG;
+
+						}
+#else
+						param.flags.flag.fl_type = FLTYPE_LONG;
+#endif
+						break;
+
+
+				}
+				break;
+
+			case	ST_FLAG:
+				switch (c)
+				{
+					default:
+						break;
+					case  '-':
+						param.flags.flag.fl_left = 1;
+						break;
+					case  '0':
+						param.pad = '0';
+						break;
+					case ' ':
+						param.flags.flag.fl_blank = 1;
+						break;
+					case '#':
+						param.flags.flag.fl_prefix = 1;
+						break;
+					case '+':
+						param.flags.flag.fl_plus = 1;
+						break;
+				}
+				break;
+
+			case	ST_TYPE:
+				switch (c)
+				{
+					default:
+						param.length = 0;
+						break;
+
+						/*
+						 * Pointer upper case
+						 */
+					case	'P':
+						param.flags.flag.fl_upper = 1;
+						/* no break */
+						/*lint -fallthrough */
+
+						/*
+						 * Pointer 
+						 */
+					case	'p':
+						param.flags.flag.fl_integer = 1;
+						param.flags.flag.fl_type	= FLTYPE_SIZEOF;
+						param.radix = 16;
+						param.prec = sizeof(void *) * 2;
+						param.prefix[0] = '-';
+						param.prefix[1] = '>';
+						param.prefixlen = 2;
+						break;
+
+						/*
+						 * Binary number
+						 */
+					case	'b':
+						param.flags.flag.fl_integer = 1;
+						param.radix = 2;
+						if (param.flags.flag.fl_prefix)
+						{
+							param.prefix[0] = '0';
+							param.prefix[1] = 'b';
+							param.prefixlen = 2;
+						}
+						break;
+
+						/*
+						 * Octal number
+						 */
+					case	'o':
+						param.flags.flag.fl_integer = 1;
+						param.radix = 8;
+						if (param.flags.flag.fl_prefix)
+						{
+							param.prefix[0] = '0';
+							param.prefixlen = 1;
+						}
+						break;
+
+						/*
+						 * Hex number upper case letter.
+						 */
+					case	'X':
+						/* no break */
+						param.flags.flag.fl_upper =1;
+
+						/* no break */
+
+						/* lint -fallthrough */
+
+						/*
+						 * Hex number lower case
+						 */
+					case	'x':
+						param.flags.flag.fl_integer = 1;
+						param.radix = 16;
+						if (param.flags.flag.fl_prefix)
+						{
+							param.prefix[0] = '0';
+							param.prefix[1] = 'x';
+							param.prefixlen = 2;
+						}
+						break;
+
+						/*
+						 * Integer number radix 10
+						 */
+					case	'd':
+					case	'i':
+						param.flags.flag.fl_decimal =
+							param.flags.flag.fl_integer = 1;
+						param.radix = 10;
+						break;
+
+						/*
+						 * Unsigned number
+						 */
+					case	'u':
+						param.flags.flag.fl_integer = 1;
+						param.radix = 10;
+						break;
+
+						/*
+						 * Upper case string
+						 */
+					case	'S':
+						param.flags.flag.fl_upper = 1;
+						/* no break */
+						/*lint -fallthrough */
+
+						/*
+						 * Normal string
+						 */
+					case	's':
+						param.out = va_arg(args,char *);
+						if (param.out == 0)
+							param.out = (char *)ms_null;
+						param.length = (int)xstrlen(param.out);
+						break;
+
+						/*
+						 * Upper case char
+						 */
+					case	'C':
+						param.flags.flag.fl_upper = 1;
+						/* no break */
+						/* lint -fallthrough */
+
+						/*
+						 * Char
+						 */
+					case	'c':
+						param.out = param.buffer;
+						param.buffer[0] = (char)va_arg(args,int);
+						param.length = 1;
+						break;
+
+#if XCFG_FORMAT_FLOAT
+						/**
+						 * Floating point number
+						 */
+					case 'f':
+						if (param.flags.flag.fl_prec == 0)
+						{
+							param.prec = 6;
+						}
+
+						param.dbl = va_arg(args,DOUBLE);
+						param.arr = 0.51;
+						for (i = 0 ; i < param.prec ; i++)
+							param.arr /= 10.0;
+
+						if (param.dbl < 0)
+						{
+							param.dbl		-= param.arr;
+							param.fPart	   = (LONG)param.dbl;
+							param.dbl		-=	(LONG)param.fPart;
+							param.dbl		 = - param.dbl;
+						}
+						else
+						{
+							param.dbl += param.arr;
+							param.fPart = (LONG)param.dbl;
+							param.dbl -= param.fPart;
+						}
+
+
+						for (i = 0 ;i < param.prec	;i++)
+							param.dbl *= 10.0;
+
+						param.values.lvalue = (unsigned LONG)param.dbl;
+
+						param.out = param.buffer + sizeof(param.buffer) - 1;
+						param.radix = 10;
+						if (param.prec)
+						{
+							ulong2a(&param);
+							*param.out -- = '.';
+							param.length ++;
+						}
+						param.flags.flag.fl_integer =
+							param.flags.flag.fl_buffer =
+							param.flags.flag.fl_decimal =
+							param.flags.flag.fl_value = 1;
+						param.prec = 0;
+						param.values.lvalue = param.fPart;
+						break;
+#endif
 
 						/**
-						 * Sign extendes for decimal  number
+						 * Boolean value
 						 */
-						if (flags & FLAG_DECIMAL)
+					case 'B':
+						if (va_arg(args,int) != 0)
+							param.out = (char*)ms_true;
+						else
+							param.out = (char*)ms_false;
+
+						param.length = (int)xstrlen(param.out);
+						break;
+
+
+				}
+
+				/*
+				 * Process integer number
+				 */
+				if (param.flags.flag.fl_integer)
+				{
+					if (param.prec == 0)
+						param.prec = 1;
+
+					if (!param.flags.flag.fl_value)
+					{
+						if (param.flags.flag.fl_decimal)
 						{
-							value = (unsigned LARGEST_INT)(LARGEST_INT)value;
+							switch (param.flags.flag.fl_type)
+							{
+								case FLTYPE_SIZEOF:
+									param.values.lvalue = (unsigned LONG)va_arg(args,void *);
+									break;
+								case FLTYPE_LONG:
+									param.values.lvalue = (LONG)va_arg(args,long);
+									break;
+								case FLTYPE_INT:
+									param.values.lvalue = (LONG)va_arg(args,int);
+									break;
+#if XCFG_FORMAT_LONGLONG
+								case FLTYPE_LONGLONG:
+									param.values.llvalue = (LONGLONG)va_arg(args,long long);
+									break;
+#endif
+							}
+
+						}
+						else
+						{
+							switch (param.flags.flag.fl_type)
+							{
+								case FLTYPE_SIZEOF:
+									param.values.lvalue = (unsigned LONG)va_arg(args,void *);
+									break;
+								case FLTYPE_LONG:
+									param.values.lvalue = (unsigned LONG)va_arg(args,unsigned long);
+									break;
+								case FLTYPE_INT:
+									param.values.lvalue = (unsigned LONG)va_arg(args,unsigned int);
+									break;
+#if XCFG_FORMAT_LONGLONG
+								case FLTYPE_LONGLONG:
+									param.values.llvalue = (unsigned LONGLONG)va_arg(args,unsigned long long);
+									break;
+#endif
+							}
 						}
 
-                    }
+					}
 
-                    if ((flags & FLAG_PREFIX) && value == 0)
-                    {
-                        prefixlen = 0;
-                    }
-                    
-                    if (flags & FLAG_DECIMAL)
-                    {
-                        if (((LARGEST_INT)value) < 0)
-                        {
-                            value = ~value + 1;
-                            flags |= FLAG_MINUS;
-                            
-                        }
-                        else if (flags & FLAG_BLANK)
-                        {
-                            prefix[0] = ' ';
-                            prefixlen = 1;
-                        }
-                    }
+					if ((param.flags.flag.fl_prefix) && param.values.lvalue == 0)
+					{
+						param.prefixlen = 0;
+					}
 
-                    if ((flags & FLAG_BUFFER) == 0)
-                    {
-                        out = buffer + sizeof(buffer) - 1;
-                    }
 
-                    while (prec -- > 0 || value)
-                    {
-                        *out -- = ms_digits[(unsigned long)value % radix];
-                        value /= radix;
-                        length ++;
-                    }
-
-                    out++;
-
-                    /*
-                     * Check if a sign is required
-                     */
-                    if (flags & (FLAG_MINUS | FLAG_PLUS))
-                    {
-                        c = flags & FLAG_MINUS ? '-' : '+';
-                        
-                        if (flags & FLAG_ZERO)
-                        {
-                            prefixlen = 1;
-                            prefix[0] = c;
-                        }
-                        else
-                        {
-                            *--out = c;
-                            length++;
-                        }
-                    }
-                }
-
-                if (width && length > width)
-                {
-                    length = width;
-                }
-                
-                padding = width - (length + prefixlen);
-
-                count += outBuffer(outchar,arg,prefix,prefixlen,flags);
-                if (!(flags & FLAG_LEFT))
-                    count += outChars(outchar,arg,flags & FLAG_ZERO ? '0' : ' ' , padding);
-                count += outBuffer(outchar,arg,out,length,flags);
-                if (flags & FLAG_LEFT)
-                    count += outChars(outchar,arg,flags & FLAG_ZERO ? '0' : ' ' , padding);
-
-        }
-    }
-
-#if VA_COPY
-    va_end(args);
+					/*
+					 * Manage signed integer
+					 */
+					if (param.flags.flag.fl_decimal)
+					{
+#if XCFG_FORMAT_LONGLONG
+						if (param.flags.flag.fl_type == FLTYPE_LONGLONG)
+						{
+							if ((LONGLONG)param.values.llvalue < 0)
+							{
+								param.values.llvalue = ~param.values.llvalue + 1;
+								param.flags.flag.fl_minus = 1;
+							}
+						}
+						else 
+						{
 #endif
-    
-    return count;
+							if ((LONG)param.values.lvalue < 0)
+							{
+								param.values.lvalue = ~param.values.lvalue + 1;
+								param.flags.flag.fl_minus = 1;
+
+							}
+#if XCFG_FORMAT_LONGLONG
+						}
+#endif
+						if (!param.flags.flag.fl_minus && param.flags.flag.fl_blank)
+						{
+							param.prefix[0] = ' ';
+							param.prefixlen = 1;
+						}
+					}
+
+					if ((param.flags.flag.fl_buffer) == 0)
+					{
+						param.out = param.buffer + sizeof(param.buffer) - 1;
+					}
+
+
+#if XCFG_FORMAT_LONGLONG
+					if (param.flags.flag.fl_type == FLTYPE_LONGLONG)
+						ullong2a(&param);
+					else
+						ulong2a(&param);
+#else
+
+					ulong2a(&param);
+#endif
+					param.out++;
+
+					/*
+					 * Check if a sign is required
+					 */
+					if (param.flags.flag.fl_minus || param.flags.flag.fl_plus)
+					{
+						c = param.flags.flag.fl_minus ? '-' : '+';
+
+						if (param.pad == '0')
+						{
+							param.prefixlen = 1;
+							param.prefix[0] = c;
+						}
+						else
+						{
+							*--param.out = c;
+							param.length++;
+						}
+					}
+
+
+				}
+				else
+				{
+					if (param.width && param.length > param.width)
+					{
+						param.length = param.width;
+					}
+				}
+
+				param.padding = param.width - (param.length + param.prefixlen);
+
+				param.count += outBuffer(outchar,arg,param.prefix,param.prefixlen,(unsigned char)param.flags.flag.fl_upper);
+				if (!(param.flags.flag.fl_left))
+					param.count += outChars(outchar,arg,param.pad,param.padding);
+				param.count += outBuffer(outchar,arg,param.out,param.length,(unsigned char)param.flags.flag.fl_upper);
+				if (param.flags.flag.fl_left)
+					param.count += outChars(outchar,arg,param.pad,param.padding);
+				
+		}
+	}
+
+#if XCFG_FORMAT_VA_COPY
+	va_end(args);
+#endif
+
+	return param.count;
 }
+
 /*lint -restore */
 
 
-/**
- * Test function
- */
-#ifdef XCFG_FORMAT_TEST
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-
-static void myPutchar(void *arg,char c)
-{
-    char ** s = (char **)arg;
-    *(*s)++ = c;
-}
-
-static void myPrintf(char *buf,const char *fmt,va_list args)
-{
-    xvformat(myPutchar,(void *)&buf,fmt,args);
-    *buf = 0;
-}
-
-
-static void testFormat(const char * fmt,...)
-{
-    char buf1[1024];
-    char buf2[1024];
-
-    va_list list;
-#if VA_COPY
-    va_list args;
-
-    va_start(args,fmt);
-#else
-    va_start(list,fmt);
-#endif
-
-#if VA_COPY
-    va_copy(list,args);
-#endif
-    
-    myPrintf(buf1,fmt,list);
-
-#if VA_COPY
-    va_end(list);
-#endif
-
-#if VA_COPY
-    va_copy(list,args);
-#endif
-
-     vsprintf(buf2,fmt,list);
-
-#if VA_COPY
-	va_end(list);
-#endif
-        
-
-	 if (*fmt != '*' && strcmp(buf1,buf2))
-     {
-		 printf("XFormat : '%s'\nvsprintf: '%s'\nFormat  : '%s' failed\n",
-			 buf1,buf2,fmt);
-        exit(1);
-    }
-	 else
-	 {
-		 	printf("'%s'\n'%s'\n",buf1,buf2);
-
-	 }
-    
-#if VA_COPY
-    va_end(args);
-    (void)args;
-#else
-	va_end(list);
-#endif
-    
-}
-
-int main(void)
-{
-	static int value;
-	static void * ptr = &value;
-	int stackValue;
-	void * stackPtr = &stackValue;
-
-	
-    printf("XFORMATC test\n\n");
-    testFormat("Hello world %u",sizeof(unsigned long));
-    testFormat("Hello %s","World");
-    testFormat("integer %05d %+d %d",-7,7,-7);
-    testFormat("Unsigned %u %lu",123,123Lu);
-    testFormat("Octal %o %lo",123,123456L);
-    testFormat("Hex %x %X %lX",0x1234,0xf0ad,0xf2345678L);
-    testFormat("String %4.4s","Large");
-    testFormat("String %*.*s",4,4,"Hello");
-    testFormat("Hex with prefix %#x %#X %#08x",1,2,12345678);
-    testFormat("Octal with prefix %#o %#o",0,5);
-    testFormat("Integer blank % d % d",1,-1);
-    testFormat("Special char %%");
-	testFormat("Size    of void * %u",sizeof(void *));
-
-#if XCFG_FORMAT_FLOAT
-    
-    testFormat("Floating %6.2f",22.0/7.0);
-    testFormat("Floating %6.2f",-22.0/7.0);
-    testFormat("Floating %+6.1f %6.2f",3.999,-3.999);
-    testFormat("Floating %6.1f %6.0f",3.999,-3.999);
-#endif
-
-	testFormat("*Sizeof of void * %zu",sizeof(void *));
-    testFormat("*Binary number %b %#b",5,6);
-    testFormat("*Stack  ptr %p %P",stackPtr,stackPtr);
-	testFormat("*Static ptr %p %P",ptr,ptr);
-	testFormat("*Text   ptr %p %P",xvformat,xvformat);
-    testFormat("*boolean %B %B",1,0);
-    testFormat("*Text pointer as sizeof %zX",xvformat);
-    printf("\nTest completed succesfuylly\n"); 
-
-    return 0;
-}
-
-#endif
-
-#endif
