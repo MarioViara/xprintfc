@@ -642,6 +642,8 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
                         if (dbl < 0)
                         {
+                            
+                            flags |= FLAG_MINUS;			
                             dbl -= arr;
                             value = (long)dbl;
                             dbl -= (long)value;
