@@ -17,7 +17,7 @@
  * 
  * @author	Mario Viara
  * 
- * @version	1.06
+ * @version	1.07
  * 
  * @copyright	Copyright Mario Viara 2014	- License Open Source (LGPL)
  * This is a free software and is opened for education, research and commercial
@@ -28,18 +28,70 @@
  * - Redistributions of source code must retain the above copyright notice.
  *
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include  "xformatc.h"
 
-#ifdef DEBUG
-#include <assert.h>
-#endif
 
 /**
- * SDCC support only float
+ * MSVC use in x64 model IL32P64 architecture so the largest integer
+ * is not a standard C	integer.
+ */
+#if defined(_MSC_VER) && defined(_M_AMD64)
+#define	LONG	long long
+#define XCFG_FORMAT_LONG_ARE_LONGLONG
+#endif
+
+
+/**
+ * SDCC support only float and for now do not support long long
  */
 #ifdef __SDCC
 #define DOUBLE	float
+#ifndef XCFG_FORMAT_LONGLONG
+#define XCFG_FORMAT_LONGLONG    0
+#endif
+#endif
+
+
+/**
+ * Define internal parameters as volatile for 8 bit cpu define
+ * XCFG_FORMAT_STATIC=static to reduce stack usage.
+ */
+#ifndef XCFG_FORMAT_STATIC
+#define XCFG_FORMAT_STATIC
+#endif
+
+
+/**
+ * Define XCFG_FORMAT_FLOAT=0 to remove floating point support
+ */
+#ifndef XCFG_FORMAT_FLOAT
+#define XCFG_FORMAT_FLOAT    1
+#endif
+
+
+/**
+ * Detect support for va_copy this macro must be called for example
+ * in X64 machine to adjust the stack frame when an argument of va_list
+ * is passed over functions.
+ */
+#ifndef XCFG_FORMAT_VA_COPY
+#ifdef  __GNUC__
+#define XCFG_FORMAT_VA_COPY     1
+#else
+#define XCFG_FORMAT_VA_COPY     0
+#endif
+#endif
+
+
+/**
+ * Define to 0 to support long long type (prefix ll)
+ */
+#ifndef XCFG_FORMAT_LONGLONG
+#define XCFG_FORMAT_LONGLONG    1
 #endif
 
 /**
@@ -78,10 +130,13 @@ struct param_s
 #if XCFG_FORMAT_LONGLONG
 		unsigned LONGLONG	llvalue;
 #endif
+#if XCFG_FORMAT_FLOAT
+		DOUBLE				dvalue;
+#endif
 	} values;
 
 	/**
-	 * Pointer to the outut buffer
+	 * Pointer to the output buffer
 	 */
 	char*		out;
 
@@ -100,10 +155,6 @@ struct param_s
 	 */
 	int		width;
 
-	/**
-	 * Length of the prefix
-	 */
-	int		prefixlen;
 
 	/**
 	 * Count the number of char emitted
@@ -133,10 +184,11 @@ struct param_s
 			/* Type of integer field */
 			unsigned	fl_type:2;
 
-#define FLTYPE_INT		0
-#define FLTYPE_LONG		1
-#define FLTYPE_SIZEOF		2
-#define FLTYPE_LONGLONG		3
+			
+#define FLTYPE_INT			0	/* Argument is integer	*/
+#define FLTYPE_LONG			1	/* Argument is long		*/
+#define FLTYPE_SIZEOF		2	/* Argument is size_t	*/
+#define FLTYPE_LONGLONG		3	/* Argument is long long*/
 
 			/* Precision set */
 			unsigned	fl_prec:1;
@@ -176,7 +228,13 @@ struct param_s
 		} flag;
 	} flags;
 
-	/* Buffer to store the filed prefix */
+
+	/**
+	 * Length of the prefix
+	 */
+	int		prefixlen;
+	
+	/* Buffer to store the filled prefix */
 	char prefix[2];
 
 	/* Radix for ascii conversion */
@@ -203,10 +261,6 @@ struct param_s
 	 */
 	unsigned LONG	fPart;
 
-	/**
-	 * Used to round the floating point number
-	 */
-	DOUBLE		arr;
 #endif
 
 };
@@ -310,7 +364,13 @@ static const unsigned char formatStates[] =
 /**
  * Convert an unsigned value in one string
  *
- * All parameter are in the passwd structure
+ * All parameter are in the passed structure
+ *
+ * @param prec		- Minimum precision
+ * @param lvalue	- Unsigned value
+ * @param radix		- Radix (Supported values 2/8/10/16)
+ *
+ * @param out		- Buffer with the converted value.
  */
 static void ulong2a(struct param_s * param)
 {
@@ -573,7 +633,6 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 #define args	_args
 #endif
 
-
 	param.count = 0;
 	param.state = ST_NORMAL;
 
@@ -817,20 +876,20 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						}
 
 						param.dbl = va_arg(args,DOUBLE);
-						param.arr = 0.51;
+						param.values.dvalue = 0.51;
 						for (i = 0 ; i < param.prec ; i++)
-							param.arr /= 10.0;
+							param.values.dvalue /= 10.0;
 
 						if (param.dbl < 0)
 						{
-							param.dbl		-= param.arr;
+							param.dbl		-= param.values.dvalue;
 							param.fPart	   = (LONG)param.dbl;
 							param.dbl		-=	(LONG)param.fPart;
 							param.dbl		 = - param.dbl;
 						}
 						else
 						{
-							param.dbl += param.arr;
+							param.dbl += param.values.dvalue;
 							param.fPart = (LONG)param.dbl;
 							param.dbl -= param.fPart;
 						}
@@ -853,8 +912,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 							param.flags.flag.fl_buffer =
 							param.flags.flag.fl_decimal =
 							param.flags.flag.fl_value = 1;
+
 						param.prec = 0;
-						param.values.lvalue = param.fPart;
+						param.values.lvalue = (unsigned LONG)param.fPart;
 						break;
 #endif
 
