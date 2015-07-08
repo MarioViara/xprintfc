@@ -418,9 +418,6 @@ static void ulong2a(struct param_s * param)
 		*param->out -- = digit;
 		param->length ++;
 
-#ifdef DEBUG
-		assert(param->length < (int)sizeof(param->buffer));
-#endif
 
 
 	}
@@ -474,10 +471,6 @@ static void ullong2a(struct param_s * param)
 
 		*param->out -- = digit;
 		param->length ++;
-
-#ifdef DEBUG
-		assert(param->length < (int)sizeof(param->buffer));
-#endif
 
 	}
 
