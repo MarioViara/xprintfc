@@ -121,7 +121,7 @@ int main(void)
 			   sizeof(char),sizeof(short),sizeof(int),sizeof(long),sizeof(void *),sizeof(size_t));
 	
 #if XCFG_FORMAT_FLOAT
-
+	testFormat("Floating %f",-0.6);
     testFormat("Floating %6.2f",22.0/7.0);
     testFormat("Floating %6.2f",-22.0/7.0);
     testFormat("Floating %+6.1f %6.2f",3.999,-3.999);
