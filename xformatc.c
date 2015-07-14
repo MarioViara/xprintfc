@@ -75,15 +75,19 @@
 
 /**
  * Detect support for va_copy this macro must be called for example
- * in X64 machine to adjust the stack frame when an argument of va_list
+ * in x86_64 machine to adjust the stack frame when an argument of va_list
  * is passed over functions.
  */
 #ifndef XCFG_FORMAT_VA_COPY
-#ifdef  __GNUC__
+#if	defined(__GNUC__) && defined(__x86_64__)
 #define XCFG_FORMAT_VA_COPY     1
-#else
-#define XCFG_FORMAT_VA_COPY     0
 #endif
+
+
+#ifndef XCFG_FORMAT_VA_COPY
+#define XCFG_FORMAT_VA_COPY	0
+#endif
+
 #endif
 
 
