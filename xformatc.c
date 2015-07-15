@@ -82,6 +82,20 @@ struct param_s
 	 */
 	char*		out;
 
+#if XCFG_FORMAT_FLOAT
+	/**
+	 * Floating point argument
+	 */
+	DOUBLE		dbl;
+
+	/**
+	 * Fractional part of floating point
+	 */
+	unsigned LONG	fPart;
+
+#endif
+
+	
 	/**
 	 * Current lenght of the output buffer
 	 */
@@ -103,15 +117,7 @@ struct param_s
 	 */
 	unsigned	count;
 
-	/**
-	 * Current state
-	 */
-	int		state;
 
-	/**
-	 * Current number of padding
-	 */
-	int		padding;
 
 	/**
 	 * Union with all flags
@@ -131,7 +137,7 @@ struct param_s
 #define FLTYPE_LONG			1	/* Argument is long		*/
 #define FLTYPE_SIZEOF		2	/* Argument is size_t	*/
 #define FLTYPE_LONGLONG		3	/* Argument is long long*/
-
+			
 			/* Precision set */
 			unsigned	fl_prec:1;
 
@@ -175,15 +181,10 @@ struct param_s
 	 * Length of the prefix
 	 */
 	int		prefixlen;
-	
+
 	/* Buffer to store the filled prefix */
 	char prefix[2];
 
-	/* Radix for ascii conversion */
-	unsigned char	radix;
-
-	/* char used for padding */
-	char		pad;
 
 	/** Buffer to store the biggest integer number in binary */
 #if XCFG_FORMAT_LONGLONG
@@ -192,18 +193,17 @@ struct param_s
 	char		buffer[sizeof(LONG)*8+1];
 #endif
 
-#if XCFG_FORMAT_FLOAT
-	/**
-	 * Floating point argument
-	 */
-	DOUBLE		dbl;
+	/* Radix for ascii conversion */
+	unsigned char	radix;
+
+	/* char used for padding */
+	char		pad;
+
 
 	/**
-	 * Fractional part of floating point
+	 * Current state
 	 */
-	unsigned LONG	fPart;
-
-#endif
+	char		state;
 
 };
 
@@ -282,7 +282,7 @@ static const char  ms_false[]= "False";
 
 /*
  * This table contains the next state for all char and it will be
- * generatet using xformattable.c
+ * generate using xformattable.c
  */
 
 static const unsigned char formatStates[] =
@@ -317,7 +317,7 @@ static const unsigned char formatStates[] =
 static void ulong2a(struct param_s * param)
 {
 	char digit;
-
+	
 	while (param->prec -- > 0 ||  param->values.lvalue)
 	{
 		switch (param->radix)
@@ -335,32 +335,26 @@ static void ulong2a(struct param_s * param)
 			case 16:
 				digit = (char)((param->values.lvalue & 0x0F)+'0');
 				param->values.lvalue >>= 4;
+
+				/**
+				 * Conversion for digit >= 10 in letters a .. z
+				 */
+				if (digit >= '0'+10)
+				{
+					digit += 39;
+				}
+				
 				break;
 			default:
 			case 10:
 				digit = (char)((param->values.lvalue % 10) + '0');
 				param->values.lvalue /= 10;
 				break;
-#if 0		   
-			default:
-				digit = (char)((param->values.lvalue % param->radix) + '0');
-				param->values.lvalue /= param->radix;
-				break;
-#endif
 		}
 
-		/**
-		 * Conversion for digit >= 10 in letters a .. z
-		 */
-		if (digit >= '0'+10)
-		{
-			digit += 39;
-		}
 
 		*param->out -- = digit;
 		param->length ++;
-
-
 
 	}
 
@@ -392,24 +386,23 @@ static void ullong2a(struct param_s * param)
 			case 16:
 				digit = (char)((param->values.llvalue & 0x0F)+'0');
 				param->values.llvalue >>= 4;
+				
+				/**
+				 * Conversion for digit >= 10 in letters a .. z
+				 */
+				if (digit >= '0'+10)
+				{
+					digit += 39;
+				}
 				break;
 			default:
 			case 10:
 				digit = (char)((param->values.llvalue % 10) + '0');
 				param->values.llvalue /= 10;
+				
 				break;
-#if 0
-			default:
-				digit = (char)((param->values.llvalue % param->radix) + '0');
-				param->values.llvalue /= param->radix;
-				break;
-#endif
 		}
 
-		if (digit >= '0'+10)
-		{
-			digit += 39;
-		}
 
 		*param->out -- = digit;
 		param->length ++;
@@ -557,7 +550,7 @@ static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int
 unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_list _args)
 {
 	XCFG_FORMAT_STATIC struct param_s param;
-	unsigned char i;
+	int i;
 	char c;
 
 #if XCFG_FORMAT_VA_COPY
@@ -753,7 +746,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					case	'd':
 					case	'i':
 						param.flags.flag.fl_decimal =
-							param.flags.flag.fl_integer = 1;
+						param.flags.flag.fl_integer = 1;
 						param.radix = 10;
 						break;
 
@@ -1006,16 +999,20 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					{
 						param.length = param.width;
 					}
+
 				}
 
-				param.padding = param.width - (param.length + param.prefixlen);
+				/*
+				 * Now width contain the size of the pad
+				 */
+				param.width -= (param.length + param.prefixlen);
 
 				param.count += outBuffer(outchar,arg,param.prefix,param.prefixlen,(unsigned char)param.flags.flag.fl_upper);
 				if (!(param.flags.flag.fl_left))
-					param.count += outChars(outchar,arg,param.pad,param.padding);
+					param.count += outChars(outchar,arg,param.pad,param.width);
 				param.count += outBuffer(outchar,arg,param.out,param.length,(unsigned char)param.flags.flag.fl_upper);
 				if (param.flags.flag.fl_left)
-					param.count += outChars(outchar,arg,param.pad,param.padding);
+					param.count += outChars(outchar,arg,param.pad,param.width);
 				
 		}
 	}
@@ -1026,6 +1023,8 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
 	return param.count;
 }
+
+unsigned xsize = sizeof(struct param_s);
 
 /*lint -restore */
 
