@@ -22,6 +22,7 @@
  * @copyright	Copyright Mario Viara 2014	- License Open Source (LGPL)
  * This is a free software and is opened for education, research and commercial
  * developments under license policy of following terms:
+ * 
  * - This is a free software and there is NO WARRANTY.
  * - No restriction on use. You can use, modify and redistribute it for personal,
  *	 non-profit or commercial product UNDER YOUR RESPONSIBILITY.
@@ -44,7 +45,7 @@
 #endif
 
 /**
- * Defined the double type if not defined
+ * Define the double type if not defined
  */
 #ifndef DOUBLE
 #define DOUBLE	double
@@ -64,7 +65,8 @@
 struct param_s
 {
 	/**
-	 * Buffer for current intger value
+	 * Buffer for current intger value and for temporary
+	 * double value defined as union to save stack.
 	 */
 	union
 	{
@@ -116,7 +118,6 @@ struct param_s
 	 * Count the number of char emitted
 	 */
 	unsigned	count;
-
 
 
 	/**
@@ -182,7 +183,7 @@ struct param_s
 	 */
 	int		prefixlen;
 
-	/* Buffer to store the filled prefix */
+	/* Buffer to store the field  prefix */
 	char prefix[2];
 
 
@@ -193,7 +194,7 @@ struct param_s
 	char		buffer[sizeof(LONG)*8+1];
 #endif
 
-	/* Radix for ascii conversion */
+	/* Radix for ASCII integer conversion */
 	unsigned char	radix;
 
 	/* char used for padding */
@@ -281,6 +282,12 @@ static const char  ms_false[]= "False";
 
 
 /*
+ * Digit values
+ */
+static const char ms_digits[] = "0123456789abcdef";
+   
+   
+/*
  * This table contains the next state for all char and it will be
  * generate using xformattable.c
  */
@@ -303,6 +310,7 @@ static const unsigned char formatStates[] =
 
 
 
+
 /**
  * Convert an unsigned value in one string
  *
@@ -316,44 +324,36 @@ static const unsigned char formatStates[] =
  */
 static void ulong2a(struct param_s * param)
 {
-	char digit;
+	unsigned char digit;
 	
 	while (param->prec -- > 0 ||  param->values.lvalue)
 	{
 		switch (param->radix)
 		{
 			case 2:
-				digit = (char)((param->values.lvalue & 0x01) + '0');
+				digit = param->values.lvalue & 0x01;
 				param->values.lvalue >>= 1;
 				break;
 
 			case 8:
-				digit = (char)((param->values.lvalue & 0x07) + '0');
+				digit = param->values.lvalue & 0x07;
 				param->values.lvalue >>= 3;
 				break;
 
 			case 16:
-				digit = (char)((param->values.lvalue & 0x0F)+'0');
+				digit = param->values.lvalue & 0x0F;
 				param->values.lvalue >>= 4;
-
-				/**
-				 * Conversion for digit >= 10 in letters a .. z
-				 */
-				if (digit >= '0'+10)
-				{
-					digit += 39;
-				}
-				
 				break;
+				
 			default:
 			case 10:
-				digit = (char)((param->values.lvalue % 10) + '0');
+				digit = param->values.lvalue % 10;
 				param->values.lvalue /= 10;
 				break;
 		}
 
 
-		*param->out -- = digit;
+		*param->out -- = ms_digits[digit];
 		param->length ++;
 
 	}
@@ -367,44 +367,37 @@ static void ulong2a(struct param_s * param)
 #else
 static void ullong2a(struct param_s * param)
 {
-	char digit;
+	unsigned char digit;
 
 	while (param->prec -- > 0 ||  param->values.llvalue)
 	{
 		switch (param->radix)
 		{
 			case 2:
-				digit = (char)((param->values.llvalue & 0x01) + '0');
+				digit = param->values.llvalue & 0x01;
 				param->values.llvalue >>= 1;
 				break;
 
 			case 8:
-				digit = (char)((param->values.llvalue & 0x07) + '0');
+				digit = param->values.llvalue & 0x07;
 				param->values.llvalue >>= 3;
 				break;
 
 			case 16:
-				digit = (char)((param->values.llvalue & 0x0F)+'0');
+				digit = param->values.llvalue & 0x0F;
 				param->values.llvalue >>= 4;
-				
-				/**
-				 * Conversion for digit >= 10 in letters a .. z
-				 */
-				if (digit >= '0'+10)
-				{
-					digit += 39;
-				}
 				break;
+				
 			default:
 			case 10:
-				digit = (char)((param->values.llvalue % 10) + '0');
+				digit = param->values.llvalue % 10;
 				param->values.llvalue /= 10;
 				
 				break;
 		}
 
 
-		*param->out -- = digit;
+		*param->out -- = ms_digits[digit];
 		param->length ++;
 
 	}
