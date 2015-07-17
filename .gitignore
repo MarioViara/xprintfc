@@ -2,3 +2,5 @@ epsilon.ses
 x
 x.bat
 sdcc/
+arm.bat
+*.lst

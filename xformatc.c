@@ -1017,7 +1017,6 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 	return param.count;
 }
 
-unsigned xsize = sizeof(struct param_s);
 
 /*lint -restore */
 
