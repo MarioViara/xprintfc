@@ -107,7 +107,7 @@ int main(void)
 
 
     printf("XFORMATC test\n\n");
-    testFormat("Hello world %u",sizeof(unsigned long));
+    testFormat("Hello world {%u}",sizeof(unsigned long));
     testFormat("Hello %s","World");
     testFormat("String %4.4s","Large");
     testFormat("String %*.*s",4,4,"Hello");
@@ -129,7 +129,8 @@ int main(void)
     testFormat("Floating %6.2f",22.0/7.0);
     testFormat("Floating %6.2f",-22.0/7.0);
     testFormat("Floating %+6.1f %6.2f",3.999,-3.999);
-    testFormat("Floating %6.1f %6.0f",3.999,-3.999);
+	testFormat("Floating %6.1f %6.0f",3.999,-3.999);
+	testFormat("Floating %5.0f",3.14);
 #endif
 
     testFormat("*Sizeof of void * %zu",sizeof(void *));
