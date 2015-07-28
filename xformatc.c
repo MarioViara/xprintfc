@@ -121,62 +121,26 @@ struct param_s
 
 
 	/**
-	 * Union with all flags
+	 * Parser flags
 	 */
-	union
-	{
+	unsigned flags;
 
-		unsigned flags;
-
-		struct
-		{
-			/* Type of integer field */
-			unsigned	fl_type:2;
-
-			
-#define FLTYPE_INT			0	/* Argument is integer	*/
-#define FLTYPE_LONG			1	/* Argument is long		*/
-#define FLTYPE_SIZEOF		2	/* Argument is size_t	*/
-#define FLTYPE_LONGLONG		3	/* Argument is long long*/
-			
-			/* Precision set */
-			unsigned	fl_prec:1;
-
-
-			/* Left alignment */
-			unsigned	fl_left:1;
-
-			/* Blank before positive integer number */
-			unsigned	fl_blank:1;
-
-			/* Prefix required */
-			unsigned	fl_prefix:1;
-
-			/* force a + before positive number */
-			unsigned	fl_plus:1;
-
-			/* Output in upper case letter */
-			unsigned	fl_upper:1;
-
-			/* Decimal field */
-			unsigned	fl_decimal:1;
-
-			/* Integer field */
-			unsigned	fl_integer:1;
-
-			/* Field is negative */
-			unsigned	fl_minus:1;
-
-
-			/* Value set */
-			unsigned	fl_value:1;
-
-			/* Buffer set */
-			unsigned	fl_buffer:1;
-
-		} flag;
-	} flags;
-
+#define FLAG_TYPE_INT		0x0000	/* Argument is integer					*/
+#define FLAG_TYPE_LONG		0x0001	/* Argument is long						*/
+#define FLAG_TYPE_SIZEOF	0x0002	/* Argument is size_t					*/
+#define FLAG_TYPE_LONGLONG	0x0003	/* Argument is long long				*/
+#define	FLAG_TYPE_MASK		0x0003	/* Mask for field type					*/
+#define FLAG_PREC			0x0004	/* Precision set						*/
+#define FLAG_LEFT			0x0008	/* Left alignment						*/
+#define	FLAG_BLANK			0x0010	/* Blank before positive integer number */
+#define	FLAG_PREFIX			0x0020	/* Prefix required						*/
+#define FLAG_PLUS			0x0040	/* Force a + before positive number		*/
+#define	FLAG_UPPER			0x0080	/* Output in upper case letter			*/
+#define FLAG_DECIMAL		0x0100	/* Decimal field						*/
+#define FLAG_INTEGER		0x0200	/* Integer field						*/
+#define FLAG_MINUS			0x0400	/* Field is negative					*/
+#define FLAG_VALUE			0x0800	/* Value set							*/
+#define FLAG_BUFFER			0x1000	/* Buffer set							*/
 
 	/**
 	 * Length of the prefix
@@ -450,7 +414,7 @@ static unsigned xstrlen(const char *s)
 	return (unsigned)(i - s);
 }
 
-static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char *buffer,int len,unsigned char toupper)
+static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char *buffer,int len,unsigned  toupper)
 {
 	unsigned count = 0;
 	int i;
@@ -545,7 +509,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 	XCFG_FORMAT_STATIC struct param_s param;
 	int i;
 	char c;
-
+	
 #if XCFG_FORMAT_VA_COPY
 	va_list args;
 
@@ -579,7 +543,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
 			case	ST_PERCENT:
 				param.length = param.prefixlen = param.width = param.prec = 0;
-				param.flags.flags = 0;
+				param.flags = 0;
 				param.pad = ' ';
 				break;
 
@@ -594,7 +558,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 				break;
 
 			case	ST_PRECIS:
-				param.flags.flag.fl_prec = 1;
+				param.flags |= FLAG_PREC;
 				if (c == '*')
 					param.prec = (int)va_arg(args,int);
 				else
@@ -607,22 +571,26 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					default:
 						break;
 					case 'z':
-						param.flags.flag.fl_type = FLTYPE_SIZEOF;
+						param.flags &= ~FLAG_TYPE_MASK;
+						param.flags |= FLAG_TYPE_SIZEOF;
 						break;
 
 					case 'l':
 #if XCFG_FORMAT_LONGLONG
-						if (param.flags.flag.fl_type == FLTYPE_LONG)
+						if ((param.flags & FLAG_TYPE_MASK) == FLAG_TYPE_LONG)
 						{
-							param.flags.flag.fl_type = FLTYPE_LONGLONG;
+							param.flags &= ~FLAG_TYPE_MASK;
+							param.flags |=  FLAG_TYPE_LONGLONG;
 						}
 						else
 						{
-							param.flags.flag.fl_type = FLTYPE_LONG;
+							param.flags &= ~FLAG_TYPE_MASK;
+							param.flags |= FLAG_TYPE_LONG;
 
 						}
 #else
-						param.flags.flag.fl_type = FLTYPE_LONG;
+						param.flags &= ~FLAG_TYPE_MASK;
+						param.flags |= FLAG_TYPE_LONG;
 #endif
 						break;
 
@@ -636,19 +604,19 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					default:
 						break;
 					case  '-':
-						param.flags.flag.fl_left = 1;
+						param.flags |= FLAG_LEFT;
 						break;
 					case  '0':
 						param.pad = '0';
 						break;
 					case ' ':
-						param.flags.flag.fl_blank = 1;
+						param.flags |= FLAG_BLANK;
 						break;
 					case '#':
-						param.flags.flag.fl_prefix = 1;
+						param.flags |= FLAG_PREFIX;
 						break;
 					case '+':
-						param.flags.flag.fl_plus = 1;
+						param.flags |= FLAG_PLUS;
 						break;
 				}
 				break;
@@ -664,7 +632,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Pointer upper case
 						 */
 					case	'P':
-						param.flags.flag.fl_upper = 1;
+						param.flags |=  FLAG_UPPER;
 						/* no break */
 						/*lint -fallthrough */
 
@@ -672,8 +640,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Pointer 
 						 */
 					case	'p':
-						param.flags.flag.fl_integer = 1;
-						param.flags.flag.fl_type	= FLTYPE_SIZEOF;
+						param.flags |= FLAG_INTEGER;
+						param.flags &= ~FLAG_TYPE_MASK;
+						param.flags |= FLAG_TYPE_SIZEOF;
 						param.radix = 16;
 						param.prec = sizeof(void *) * 2;
 						param.prefix[0] = '-';
@@ -685,9 +654,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Binary number
 						 */
 					case	'b':
-						param.flags.flag.fl_integer = 1;
+						param.flags |= FLAG_INTEGER;
 						param.radix = 2;
-						if (param.flags.flag.fl_prefix)
+						if (param.flags & FLAG_PREFIX)
 						{
 							param.prefix[0] = '0';
 							param.prefix[1] = 'b';
@@ -699,9 +668,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Octal number
 						 */
 					case	'o':
-						param.flags.flag.fl_integer = 1;
+						param.flags |= FLAG_INTEGER;
 						param.radix = 8;
-						if (param.flags.flag.fl_prefix)
+						if (param.flags & FLAG_PREFIX)
 						{
 							param.prefix[0] = '0';
 							param.prefixlen = 1;
@@ -713,7 +682,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 */
 					case	'X':
 						/* no break */
-						param.flags.flag.fl_upper =1;
+						param.flags |= FLAG_UPPER;
 
 						/* no break */
 
@@ -723,9 +692,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Hex number lower case
 						 */
 					case	'x':
-						param.flags.flag.fl_integer = 1;
+						param.flags |= FLAG_INTEGER;
 						param.radix = 16;
-						if (param.flags.flag.fl_prefix)
+						if (param.flags & FLAG_PREFIX)
 						{
 							param.prefix[0] = '0';
 							param.prefix[1] = 'x';
@@ -738,8 +707,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 */
 					case	'd':
 					case	'i':
-						param.flags.flag.fl_decimal =
-						param.flags.flag.fl_integer = 1;
+						param.flags |= FLAG_DECIMAL|FLAG_INTEGER;
 						param.radix = 10;
 						break;
 
@@ -747,7 +715,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Unsigned number
 						 */
 					case	'u':
-						param.flags.flag.fl_integer = 1;
+						param.flags |= FLAG_INTEGER;
 						param.radix = 10;
 						break;
 
@@ -755,7 +723,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Upper case string
 						 */
 					case	'S':
-						param.flags.flag.fl_upper = 1;
+						param.flags |= FLAG_UPPER;
 						/* no break */
 						/*lint -fallthrough */
 
@@ -773,7 +741,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Upper case char
 						 */
 					case	'C':
-						param.flags.flag.fl_upper = 1;
+						param.flags |= FLAG_UPPER;
 						/* no break */
 						/* lint -fallthrough */
 
@@ -791,7 +759,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Floating point number
 						 */
 					case 'f':
-						if (param.flags.flag.fl_prec == 0)
+						if (!(param.flags & FLAG_PREC))
 						{
 							param.prec = 6;
 						}
@@ -803,7 +771,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
 						if (param.dbl < 0)
 						{
-							param.flags.flag.fl_minus = 1;
+							param.flags |= FLAG_MINUS;
 							param.dbl		-= param.values.dvalue;
 							param.fPart	   = (LONG)param.dbl;
 							param.dbl		-=	(LONG)param.fPart;
@@ -830,10 +798,8 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 							*param.out -- = '.';
 							param.length ++;
 						}
-						param.flags.flag.fl_integer =
-							param.flags.flag.fl_buffer =
-							param.flags.flag.fl_decimal =
-							param.flags.flag.fl_value = 1;
+						param.flags |= FLAG_INTEGER | FLAG_BUFFER |
+									   FLAG_DECIMAL | FLAG_VALUE;
 
 						param.prec = 0;
 						param.values.lvalue = (unsigned LONG)param.fPart;
@@ -858,28 +824,28 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 				/*
 				 * Process integer number
 				 */
-				if (param.flags.flag.fl_integer)
+				if (param.flags & FLAG_INTEGER)
 				{
 					if (param.prec == 0)
 						param.prec = 1;
 
-					if (!param.flags.flag.fl_value)
+					if (!(param.flags & FLAG_VALUE))
 					{
-						if (param.flags.flag.fl_decimal)
+						if (param.flags & FLAG_DECIMAL)
 						{
-							switch (param.flags.flag.fl_type)
+							switch (param.flags & FLAG_TYPE_MASK)
 							{
-								case FLTYPE_SIZEOF:
+								case FLAG_TYPE_SIZEOF:
 									param.values.lvalue = (unsigned LONG)va_arg(args,void *);
 									break;
-								case FLTYPE_LONG:
+								case FLAG_TYPE_LONG:
 									param.values.lvalue = (LONG)va_arg(args,long);
 									break;
-								case FLTYPE_INT:
+								case FLAG_TYPE_INT:
 									param.values.lvalue = (LONG)va_arg(args,int);
 									break;
 #if XCFG_FORMAT_LONGLONG
-								case FLTYPE_LONGLONG:
+								case FLAG_TYPE_LONGLONG:
 									param.values.llvalue = (LONGLONG)va_arg(args,long long);
 									break;
 #endif
@@ -888,19 +854,19 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						}
 						else
 						{
-							switch (param.flags.flag.fl_type)
+							switch (param.flags & FLAG_TYPE_MASK)
 							{
-								case FLTYPE_SIZEOF:
+								case FLAG_TYPE_SIZEOF:
 									param.values.lvalue = (unsigned LONG)va_arg(args,void *);
 									break;
-								case FLTYPE_LONG:
+								case FLAG_TYPE_LONG:
 									param.values.lvalue = (unsigned LONG)va_arg(args,unsigned long);
 									break;
-								case FLTYPE_INT:
+								case FLAG_TYPE_INT:
 									param.values.lvalue = (unsigned LONG)va_arg(args,unsigned int);
 									break;
 #if XCFG_FORMAT_LONGLONG
-								case FLTYPE_LONGLONG:
+								case FLAG_TYPE_LONGLONG:
 									param.values.llvalue = (unsigned LONGLONG)va_arg(args,unsigned long long);
 									break;
 #endif
@@ -909,7 +875,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
 					}
 
-					if ((param.flags.flag.fl_prefix) && param.values.lvalue == 0)
+					if ((param.flags & FLAG_PREFIX) && param.values.lvalue == 0)
 					{
 						param.prefixlen = 0;
 					}
@@ -918,15 +884,15 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					/*
 					 * Manage signed integer
 					 */
-					if (param.flags.flag.fl_decimal)
+					if (param.flags & FLAG_DECIMAL)
 					{
 #if XCFG_FORMAT_LONGLONG
-						if (param.flags.flag.fl_type == FLTYPE_LONGLONG)
+						if ((param.flags & FLAG_TYPE_MASK) == FLAG_TYPE_LONGLONG)
 						{
 							if ((LONGLONG)param.values.llvalue < 0)
 							{
 								param.values.llvalue = ~param.values.llvalue + 1;
-								param.flags.flag.fl_minus = 1;
+								param.flags |= FLAG_MINUS;
 							}
 						}
 						else 
@@ -935,27 +901,27 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 							if ((LONG)param.values.lvalue < 0)
 							{
 								param.values.lvalue = ~param.values.lvalue + 1;
-								param.flags.flag.fl_minus = 1;
+								param.flags |= FLAG_MINUS;
 
 							}
 #if XCFG_FORMAT_LONGLONG
 						}
 #endif
-						if (!param.flags.flag.fl_minus && param.flags.flag.fl_blank)
+						if (!(param.flags & FLAG_MINUS)  && (param.flags & FLAG_BLANK))
 						{
 							param.prefix[0] = ' ';
 							param.prefixlen = 1;
 						}
 					}
 
-					if ((param.flags.flag.fl_buffer) == 0)
+					if ((param.flags & FLAG_BUFFER) == 0)
 					{
 						param.out = param.buffer + sizeof(param.buffer) - 1;
 					}
 
 
 #if XCFG_FORMAT_LONGLONG
-					if (param.flags.flag.fl_type == FLTYPE_LONGLONG)
+					if ((param.flags & FLAG_TYPE_MASK) == FLAG_TYPE_LONGLONG)
 						ullong2a(&param);
 					else
 						ulong2a(&param);
@@ -968,9 +934,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					/*
 					 * Check if a sign is required
 					 */
-					if (param.flags.flag.fl_minus || param.flags.flag.fl_plus)
+					if (param.flags & (FLAG_MINUS|FLAG_PLUS))
 					{
-						c = param.flags.flag.fl_minus ? '-' : '+';
+						c = param.flags & FLAG_MINUS ? '-' : '+';
 
 						if (param.pad == '0')
 						{
@@ -1000,11 +966,11 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 				 */
 				param.width -= (param.length + param.prefixlen);
 
-				param.count += outBuffer(outchar,arg,param.prefix,param.prefixlen,(unsigned char)param.flags.flag.fl_upper);
-				if (!(param.flags.flag.fl_left))
+				param.count += outBuffer(outchar,arg,param.prefix,param.prefixlen,param.flags & FLAG_UPPER);
+				if (!(param.flags & FLAG_LEFT))
 					param.count += outChars(outchar,arg,param.pad,param.width);
-				param.count += outBuffer(outchar,arg,param.out,param.length,(unsigned char)param.flags.flag.fl_upper);
-				if (param.flags.flag.fl_left)
+				param.count += outBuffer(outchar,arg,param.out,param.length,param.flags & FLAG_UPPER);
+				if (param.flags & FLAG_LEFT)
 					param.count += outChars(outchar,arg,param.pad,param.width);
 				
 		}
