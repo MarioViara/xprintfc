@@ -38,7 +38,7 @@
 
 
 /**
- * Default largest int to long
+ * Default largest int is long
  */
 #ifndef	LONG
 #define	LONG	long
@@ -65,7 +65,7 @@
 struct param_s
 {
 	/**
-	 * Buffer for current intger value and for temporary
+	 * Buffer for current integer value and for temporary
 	 * double value defined as union to save stack.
 	 */
 	union
@@ -99,7 +99,7 @@ struct param_s
 
 	
 	/**
-	 * Current lenght of the output buffer
+	 * Current length of the output buffer
 	 */
 	int		length;
 
