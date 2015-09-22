@@ -24,9 +24,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "xformatc.h"
-
 
 
 static void myPutchar(void *arg,char c)
@@ -144,8 +144,10 @@ int main(void)
 #if XCFG_FORMAT_LONGLONG
     testFormat("long long int %lld",(long long)123);
     testFormat("long long int %lld",(long long)-123);
-    testFormat("long long hex %#llx",(long long)0x123456789abcdef);
+	testFormat("long long hex %#llx",(long long)0x123456789abcdef);
     testFormat("long long hex %#llX",(long long)0x123456789abcdef);
+	testFormat("Floating > 32 bit %f",pow(2.0,32.0)+1.0);
+	testFormat("Floating < 32 bit %f",-pow(2.0,32.0)-1.0);
 #endif
     printf("\nTest completed succesfuylly\n"); 
 

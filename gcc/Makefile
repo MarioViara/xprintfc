@@ -5,7 +5,7 @@ CFLAGS=-pedantic -Wall -Wextra -Wno-long-long -DXCFG_FORMAT_LONGLONG=1
 all: xformattest xformattable
 
 
-xformattest: ../xformatc.c ../xformattest.c Makefile
+xformattest: ../xformatc.c ../xformattest.c ../xformatc.h Makefile
 	$(CC) $(CFLAGS) ../xformattest.c ../xformatc.c -o xformattest 
 
 xformattable: ../xformatc.c ../xformattable.c Makefile

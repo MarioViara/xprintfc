@@ -17,7 +17,6 @@
  * 
  * @author	Mario Viara
  * 
- * @version	1.07
  * 
  * @copyright	Copyright Mario Viara 2014	- License Open Source (LGPL)
  * This is a free software and is opened for education, research and commercial
@@ -32,7 +31,6 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-
 #include  "xformatc.h"
 
 
@@ -57,6 +55,21 @@
  */
 #ifndef LONGLONG
 #define LONGLONG   long long
+#endif
+
+
+/**
+ * Definition to convert integer part of floating point
+ * numer if supported we use the long long type
+ */
+#if XCFG_FORMAT_LONGLONG
+#define	FLOAT_LONG		LONGLONG
+#define FLOAT_VALUE		llvalue
+#define FLOAT_TYPE		FLAG_TYPE_LONGLONG
+#else
+#define FLOAT_LONG		LONG
+#define FLOAT_VALUE		lvalue
+#define FLOAT_TYPE		FLAG_TYPE_LONG
 #endif
 
 /**
@@ -93,7 +106,7 @@ struct param_s
 	/**
 	 * Fractional part of floating point
 	 */
-	unsigned LONG	fPart;
+	unsigned FLOAT_LONG	fPart;
 
 #endif
 
@@ -773,14 +786,14 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						{
 							param.flags |= FLAG_MINUS;
 							param.dbl		-= param.values.dvalue;
-							param.fPart	   = (LONG)param.dbl;
-							param.dbl		-=	(LONG)param.fPart;
+							param.fPart	   = (FLOAT_LONG)param.dbl;
+							param.dbl		-=	(FLOAT_LONG)param.fPart;
 							param.dbl		 = - param.dbl;
 						}
 						else
 						{
 							param.dbl += param.values.dvalue;
-							param.fPart = (LONG)param.dbl;
+							param.fPart = (FLOAT_LONG)param.dbl;
 							param.dbl -= param.fPart;
 						}
 
@@ -799,10 +812,10 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 							param.length ++;
 						}
 						param.flags |= FLAG_INTEGER | FLAG_BUFFER |
-									   FLAG_DECIMAL | FLAG_VALUE;
+									   FLAG_DECIMAL | FLAG_VALUE  | FLOAT_TYPE;
 
 						param.prec = 0;
-						param.values.lvalue = (unsigned LONG)param.fPart;
+						param.values.FLOAT_VALUE  = (unsigned FLOAT_LONG)param.fPart;
 						break;
 #endif
 
