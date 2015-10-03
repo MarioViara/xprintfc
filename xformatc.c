@@ -844,46 +844,29 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
 					if (!(param.flags & FLAG_VALUE))
 					{
-						if (param.flags & FLAG_DECIMAL)
+						switch (param.flags & FLAG_TYPE_MASK)
 						{
-							switch (param.flags & FLAG_TYPE_MASK)
-							{
-								case FLAG_TYPE_SIZEOF:
-									param.values.lvalue = (unsigned LONG)va_arg(args,void *);
-									break;
-								case FLAG_TYPE_LONG:
+							case FLAG_TYPE_SIZEOF:
+								param.values.lvalue = (unsigned LONG)va_arg(args,void *);
+								break;
+							case FLAG_TYPE_LONG:
+								if (param.flags & FLAG_DECIMAL)
 									param.values.lvalue = (LONG)va_arg(args,long);
-									break;
-								case FLAG_TYPE_INT:
-									param.values.lvalue = (LONG)va_arg(args,int);
-									break;
-#if XCFG_FORMAT_LONGLONG
-								case FLAG_TYPE_LONGLONG:
-									param.values.llvalue = (LONGLONG)va_arg(args,long long);
-									break;
-#endif
-							}
-
-						}
-						else
-						{
-							switch (param.flags & FLAG_TYPE_MASK)
-							{
-								case FLAG_TYPE_SIZEOF:
-									param.values.lvalue = (unsigned LONG)va_arg(args,void *);
-									break;
-								case FLAG_TYPE_LONG:
+								else
 									param.values.lvalue = (unsigned LONG)va_arg(args,unsigned long);
-									break;
-								case FLAG_TYPE_INT:
+								break;
+								
+							case FLAG_TYPE_INT:
+								if (param.flags & FLAG_DECIMAL)
+									param.values.lvalue = (LONG)va_arg(args,int);
+								else
 									param.values.lvalue = (unsigned LONG)va_arg(args,unsigned int);
-									break;
+								break;
 #if XCFG_FORMAT_LONGLONG
-								case FLAG_TYPE_LONGLONG:
-									param.values.llvalue = (unsigned LONGLONG)va_arg(args,unsigned long long);
-									break;
+							case FLAG_TYPE_LONGLONG:
+								param.values.llvalue = (LONGLONG)va_arg(args,long long);
+								break;
 #endif
-							}
 						}
 
 					}
@@ -995,7 +978,6 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
 	return param.count;
 }
-
 
 /*lint -restore */
 
