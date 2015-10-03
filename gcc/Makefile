@@ -1,5 +1,6 @@
 CC=gcc
-CFLAGS=-pedantic -Wall -Wextra -Wno-long-long -DXCFG_FORMAT_LONGLONG=1
+UFLAGS=
+CFLAGS=${UFLAGS} -O3 -pedantic -Wall -Wextra -Wno-long-long 
 
 
 all: xformattest xformattable
@@ -13,4 +14,4 @@ xformattable: ../xformatc.c ../xformattable.c Makefile
 
 
 clean:
-	rm -fr build/*
+	rm -fr *.o *.exe xformattest xformattable
