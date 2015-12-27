@@ -83,7 +83,7 @@
 		<link>
 			<name>src</name>
 			<type>2</type>
-			<locationURI>PARENT-2-PROJECT_LOC</locationURI>
+			<locationURI>PARENT-1-WORKSPACE_LOC/src</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -5,3 +5,4 @@ sdcc/
 arm.bat
 *.lst
 *.o
+RemoteSystemsTempFiles/
