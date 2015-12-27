@@ -653,9 +653,8 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Pointer 
 						 */
 					case	'p':
-						param.flags |= FLAG_INTEGER;
 						param.flags &= ~FLAG_TYPE_MASK;
-						param.flags |= FLAG_TYPE_SIZEOF;
+						param.flags |= FLAG_INTEGER | FLAG_TYPE_SIZEOF;
 						param.radix = 16;
 						param.prec = sizeof(void *) * 2;
 						param.prefix[0] = '-';
