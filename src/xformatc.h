@@ -5,8 +5,6 @@
  * 
  * @author      Mario Viara
  * 
- * @version     1.01
- * 
  * @copyright   Copyright Mario Viara 2014  - License Open Source (LGPL)
  * This is a free software and is opened for education, research and commercial
  * developments under license policy of following terms:
@@ -15,6 +13,7 @@
  *   non-profit or commercial product UNDER YOUR RESPONSIBILITY.
  * - Redistributions of source code must retain the above copyright notice.
  *
+ * To contact the author send an email to mario_at_viara.eu*
  */
 #ifndef XFORMATC_H
 #define XFORMATC_H

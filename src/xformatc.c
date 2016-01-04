@@ -27,10 +27,13 @@
  *	 non-profit or commercial product UNDER YOUR RESPONSIBILITY.
  * - Redistributions of source code must retain the above copyright notice.
  *
+ * To contact the author send an email to mario_at_viara.eu
+ *
  */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
 #include  "xformatc.h"
 
 
@@ -60,7 +63,7 @@
 
 /**
  * Definition to convert integer part of floating point
- * numer if supported we use the long long type
+ * number if supported we use the long long type
  */
 #if XCFG_FORMAT_LONGLONG
 #define	FLOAT_LONG		LONGLONG
@@ -513,7 +516,7 @@ static unsigned outChars(void (*myoutchar)(void *arg,char),void *arg,char ch,int
  * @param outchar - Pointer to the function to output one char.
  * @param arg	- Argument for the output function.
  * @param fmt	- Format options for the list of parameters.
- * @param args	-List parameters.
+ * @param args	- List parameters.
  *
  * @return The number of char emitted.
  */
@@ -555,8 +558,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 				break;
 
 			case	ST_PERCENT:
-				param.length = param.prefixlen = param.width = param.prec = 0;
-				param.flags = 0;
+				param.flags = param.length = param.prefixlen = param.width = param.prec = 0;
 				param.pad = ' ';
 				break;
 
