@@ -107,9 +107,9 @@ struct param_s
 	DOUBLE		dbl;
 
 	/**
-	 * Fractional part of floating point
+	 * Integer part of floating point
 	 */
-	unsigned FLOAT_LONG	fPart;
+	unsigned FLOAT_LONG	iPart;
 
 #endif
 
@@ -779,7 +779,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						}
 
 						param.dbl = va_arg(args,DOUBLE);
-						param.values.dvalue = 0.51;
+						param.values.dvalue = 0.50;
 						for (i = 0 ; i < param.prec ; i++)
 							param.values.dvalue /= 10.0;
 
@@ -787,15 +787,15 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						{
 							param.flags |= FLAG_MINUS;
 							param.dbl		-= param.values.dvalue;
-							param.fPart	   = (FLOAT_LONG)param.dbl;
-							param.dbl		-=	(FLOAT_LONG)param.fPart;
+							param.iPart	   = (FLOAT_LONG)param.dbl;
+							param.dbl		-=	(FLOAT_LONG)param.iPart;
 							param.dbl		 = - param.dbl;
 						}
 						else
 						{
 							param.dbl += param.values.dvalue;
-							param.fPart = (FLOAT_LONG)param.dbl;
-							param.dbl -= param.fPart;
+							param.iPart = (FLOAT_LONG)param.dbl;
+							param.dbl -= param.iPart;
 						}
 
 
@@ -816,7 +816,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 									   FLAG_DECIMAL | FLAG_VALUE  | FLOAT_TYPE;
 
 						param.prec = 0;
-						param.values.FLOAT_VALUE  = (unsigned FLOAT_LONG)param.fPart;
+						param.values.FLOAT_VALUE  = (unsigned FLOAT_LONG)param.iPart;
 						break;
 #endif
 

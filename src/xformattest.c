@@ -129,8 +129,14 @@ int main(void)
     testFormat("Floating %6.2f",22.0/7.0);
     testFormat("Floating %6.2f",-22.0/7.0);
     testFormat("Floating %+6.1f %6.2f",3.999,-3.999);
-	testFormat("Floating %6.1f %6.0f",3.999,-3.999);
-	testFormat("Floating %5.0f",3.14);
+    testFormat("Floating %6.1f %6.0f",3.999,-3.999);
+    testFormat("Floating %5.0f",3.14);
+    testFormat("Floating %.0f",0.491);
+    testFormat("Floating %.0f",0.490);
+    testFormat("Floating %.0f",0.489);
+    testFormat("Floating %.0f",-0.491);
+    testFormat("Floating %.0f",-0.490);
+    testFormat("Floating %.0f",-0.489);
 #endif
 
     testFormat("*Sizeof of void * %zu",sizeof(void *));
