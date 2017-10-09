@@ -678,9 +678,10 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 */
 					case	'd':
 					case	'i':
-						param.flags |= FLAG_DECIMAL|FLAG_INTEGER;
-						param.radix = 10;
-						break;
+						param.flags |= FLAG_DECIMAL;
+						/* no break */
+
+						/* lint -fallthrough */
 
 						/*
 						 * Unsigned number
