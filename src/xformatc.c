@@ -261,10 +261,6 @@ static const char  ms_true[] = "True";
 static const char  ms_false[]= "False";
 
 
-/*
- * Digit values
- */
-static const char ms_digits[] = "0123456789abcdef";
    
    
 /*
@@ -289,10 +285,44 @@ static const unsigned char formatStates[] =
 };
 
 
+static const char ms_digits[] = "0123456789abcdef";
+
+#define U2A(name,value) \
+static void name(struct param_s * param) \
+{ \
+	unsigned char digit; \
+	while (param->prec -- > 0 ||  param->values.value) \
+	{ \
+		switch (param->radix) \
+		{ \
+			case 2: \
+				digit = param->values.value & 0x01; \
+				param->values.value >>= 1; \
+				break; \
+			case 8: \
+				digit = param->values.value & 0x07; \
+				param->values.value >>= 3; \
+				break; \
+			case 16: \
+				digit = param->values.value & 0x0F;\
+				param->values.value >>= 4; \
+				break; \
+			default: \
+			case 10:  \
+				digit = param->values.value % 10; \
+				param->values.value /= 10; \
+				break; \
+		} \
+		*param->out -- = ms_digits[digit]; \
+		param->length ++; \
+	} \
+}
+
+
 
 
 /**
- * Convert an unsigned value in one string
+ * Convert an unsigned long value in one string
  *
  * All parameter are in the passed structure
  *
@@ -302,87 +332,12 @@ static const unsigned char formatStates[] =
  *
  * @param out		- Buffer with the converted value.
  */
-static void ulong2a(struct param_s * param)
-{
-	unsigned char digit;
-	
-	while (param->prec -- > 0 ||  param->values.lvalue)
-	{
-		switch (param->radix)
-		{
-			case 2:
-				digit = param->values.lvalue & 0x01;
-				param->values.lvalue >>= 1;
-				break;
-
-			case 8:
-				digit = param->values.lvalue & 0x07;
-				param->values.lvalue >>= 3;
-				break;
-
-			case 16:
-				digit = param->values.lvalue & 0x0F;
-				param->values.lvalue >>= 4;
-				break;
-				
-			default:
-			case 10:
-				digit = param->values.lvalue % 10;
-				param->values.lvalue /= 10;
-				break;
-		}
-
-
-		*param->out -- = ms_digits[digit];
-		param->length ++;
-
-	}
-
-}
-
-
+U2A(ulong2a,lvalue)
 #if XCFG_FORMAT_LONGLONG
 #ifdef XCFG_FORMAT_LONG_ARE_LONGLONG
 #define	ullong2a	ulong2a
 #else
-static void ullong2a(struct param_s * param)
-{
-	unsigned char digit;
-
-	while (param->prec -- > 0 ||  param->values.llvalue)
-	{
-		switch (param->radix)
-		{
-			case 2:
-				digit = param->values.llvalue & 0x01;
-				param->values.llvalue >>= 1;
-				break;
-
-			case 8:
-				digit = param->values.llvalue & 0x07;
-				param->values.llvalue >>= 3;
-				break;
-
-			case 16:
-				digit = param->values.llvalue & 0x0F;
-				param->values.llvalue >>= 4;
-				break;
-				
-			default:
-			case 10:
-				digit = param->values.llvalue % 10;
-				param->values.llvalue /= 10;
-				
-				break;
-		}
-
-
-		*param->out -- = ms_digits[digit];
-		param->length ++;
-
-	}
-
-}
+U2A(ullong2a,llvalue)
 #endif
 #endif
 
