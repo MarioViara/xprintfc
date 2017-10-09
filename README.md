@@ -3,7 +3,10 @@ xprintfc
 
 Most completed and little printf like subsystem for embedded system.
 
-Main features :
+Example of code size now 2 architecture with all features enabled, compiled with -O3 :
+
+    Embedded 32 bit ARM : 2268 bytes
+    Linux X64 : 3690 bytes
 
  - Tested on microprocessor from 8 to 64 bit
  - Optional support for floating point number
