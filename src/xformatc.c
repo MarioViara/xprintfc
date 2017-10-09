@@ -3,16 +3,18 @@
  *
  * @brief	Printf C implementation.
  *
- * Tested wuth the following operating systems / compilers :
+ * Tested with the following operating systems / compilers :
  *
  * - Visual studio 6
  * - Visual studio 2008 / Windows CE
  * - MinGw 32
  * - Linux i686
  * - Linux x86_64
- * - GCC wiith embedded ARM.
+ * - GCC wiith embedded ARM (M0+/M3/M4/M4F)
  * - Linux armel
+ * - Linux armhf
  * - HCS08 with Freescale compiler.
+ *
  * - SDCC (Z80 and 8051)
  * 
  * @author	Mario Viara
