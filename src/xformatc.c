@@ -44,7 +44,11 @@
  * Default largest int is long
  */
 #ifndef	LONG
+#if XCFG_FORMAT_LONG
 #define	LONG	long
+#else
+#define LONG	int
+#endif
 #endif
 
 /**
@@ -547,6 +551,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						param.flags |= FLAG_TYPE_SIZEOF;
 						break;
 
+#if XCFG_FORMAT_LONG
 					case 'l':
 #if XCFG_FORMAT_LONGLONG
 						if ((param.flags & FLAG_TYPE_MASK) == FLAG_TYPE_LONG)
@@ -565,7 +570,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						param.flags |= FLAG_TYPE_LONG;
 #endif
 						break;
-
+#endif
 
 				}
 				break;

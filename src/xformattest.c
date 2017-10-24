@@ -147,6 +147,11 @@ int main(void)
     testFormat("*boolean %B %B",1,0);
     testFormat("*Text pointer as sizeof %zX",xvformat);
 
+#if XCFG_FORMAT_LONG
+    testFormat("long %d %o %x",123456L,123456L,123456L);
+    testFormat("*long binary %b",123456L);
+#endif
+
 #if XCFG_FORMAT_LONGLONG
     testFormat("long long int %lld",(long long)123);
     testFormat("long long int %lld",(long long)-123);

@@ -78,11 +78,15 @@ extern "C" {
 #endif
 
 
+#ifndef XCFG_FORMAT_LONG
+#define XCFG_FORMAT_LONG	1
+#endif
+
 /**
  * Define to 0 to support long long type (prefix ll)
  */
 #ifndef XCFG_FORMAT_LONGLONG
-#define XCFG_FORMAT_LONGLONG    1
+#define XCFG_FORMAT_LONGLONG    XCFG_FORMAT_LONG
 #endif
 
 
