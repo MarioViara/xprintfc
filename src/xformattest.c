@@ -160,7 +160,7 @@ int main(void)
 	testFormat("Floating > 32 bit %f",pow(2.0,32.0)+1.0);
 	testFormat("Floating < 32 bit %f",-pow(2.0,32.0)-1.0);
 #endif
-    printf("\nTest completed succesfuylly\n"); 
+    printf("\nTest completed successfully\n");
 
     return 0;
 }

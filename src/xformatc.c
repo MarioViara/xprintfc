@@ -10,7 +10,7 @@
  * - MinGw 32
  * - Linux i686
  * - Linux x86_64
- * - GCC wiith embedded ARM (M0+/M3/M4/M4F)
+ * - GCC with embedded ARM (M0+/M3/M4/M4F)
  * - Linux armel
  * - Linux armhf
  * - HCS08 with Freescale compiler.
