@@ -267,7 +267,28 @@ static const char  ms_true[] = "True";
 static const char  ms_false[]= "False";
 
 
-   
+#if XCFG_FORMAT_FLOAT
+static  DOUBLE xpow10(int e)
+{
+	DOUBLE result = 1.0;
+	static const DOUBLE table[] = {10.0,100.0,1000.0,10000.0,100000.0,1000000.0};
+	static const int size = sizeof(table)/sizeof(table[0]);
+
+	if (e > 0)
+	{
+		if (e > size)
+		{
+			result = table[size - 1];
+			for (e = e - size ; e ; e--)
+				result *= 10.0;
+		}
+		else
+			result = table[e - 1];
+	}
+
+	return result;
+}
+#endif
    
 /*
  * This table contains the next state for all char and it will be
@@ -743,28 +764,24 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						}
 
 						param.dbl = va_arg(args,DOUBLE);
-						param.values.dvalue = 0.50;
-						for (i = 0 ; i < param.prec ; i++)
-							param.values.dvalue /= 10.0;
+						param.values.dvalue =  xpow10(param.prec);
 
 						if (param.dbl < 0)
 						{
 							param.flags |= FLAG_MINUS;
-							param.dbl		-= param.values.dvalue;
+							param.dbl		-= 0.5 / param.values.dvalue;
 							param.iPart	   = (FLOAT_LONG)param.dbl;
 							param.dbl		-=	(FLOAT_LONG)param.iPart;
 							param.dbl		 = - param.dbl;
 						}
 						else
 						{
-							param.dbl += param.values.dvalue;
+							param.dbl += 0.5 / param.values.dvalue;
 							param.iPart = (FLOAT_LONG)param.dbl;
 							param.dbl -= param.iPart;
 						}
 
-
-						for (i = 0 ;i < param.prec	;i++)
-							param.dbl *= 10.0;
+						param.dbl *= param.values.dvalue;
 
 						param.values.lvalue = (unsigned LONG)param.dbl;
 
