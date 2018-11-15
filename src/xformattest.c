@@ -79,7 +79,7 @@ static void testFormat(const char * fmt,...)
 
     if (*fmt != '*' && strcmp(buf1,buf2))
     {
-        printf("XFormat : '%s'\nvsprintf: '%s'\nFormat  : '%s' failed\n",
+        fprintf(stderr,"XFormat : '%s'\nvsprintf: '%s'\nFormat  : '%s' failed\n",
                buf1,buf2,fmt);
         exit(1);
     }
@@ -106,7 +106,7 @@ int main(void)
     void * stackPtr = &stackValue;
 
 
-    printf("XFORMATC test\n\n");
+    fprintf(stderr,"XFORMATC test\n\n");
     testFormat("Hello world {%u}",sizeof(unsigned long));
     testFormat("Hello %s","World");
     testFormat("String %4.4s","Large");
@@ -137,6 +137,12 @@ int main(void)
     testFormat("Floating %.0f",-0.491);
     testFormat("Floating %.0f",-0.490);
     testFormat("Floating %.0f",-0.489);
+	testFormat("Floating > 20 bit %f",pow(2.0,20.0)+1.0);
+	testFormat("Floating < 20 bit %f",-pow(2.0,20.0)-1.0);
+#if XCFG_FORMAT_LONGLONG && XCFG_FORMAT_FLOAT_PREC == 0
+	testFormat("Floating > 32 bit %f",pow(2.0,32.0)+1.0);
+	testFormat("Floating < 32 bit %f",-pow(2.0,32.0)-1.0);
+#endif
 #endif
 
     testFormat("*Sizeof of void * %zu",sizeof(void *));
@@ -157,10 +163,8 @@ int main(void)
     testFormat("long long int %lld",(long long)-123);
 	testFormat("long long hex %#llx",(long long)0x123456789abcdef);
     testFormat("long long hex %#llX",(long long)0x123456789abcdef);
-	testFormat("Floating > 32 bit %f",pow(2.0,32.0)+1.0);
-	testFormat("Floating < 32 bit %f",-pow(2.0,32.0)-1.0);
 #endif
-    printf("\nTest completed successfully\n");
+    fprintf(stderr,"\nTest completed successfully\n");
 
     return 0;
 }
