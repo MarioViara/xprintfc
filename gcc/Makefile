@@ -1,6 +1,6 @@
 CC=gcc
 UFLAGS=
-CFLAGS=${UFLAGS} -O3 -pedantic -Wall -Wextra -Wno-long-long 
+CFLAGS=${UFLAGS} -DHAVE_CONFIG_H -I. -O3 -pedantic -Wall -Wextra -Wno-long-long 
 
 
 all: xformattest xformattable xformatspeed
