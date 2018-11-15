@@ -293,34 +293,35 @@ static const unsigned char formatStates[] =
 
 static const char ms_digits[] = "0123456789abcdef";
 
-#define U2A(name,value) \
+#define U2A(name,type,value) \
 static void name(struct param_s * param) \
 { \
 	unsigned char digit; \
-	while (param->prec -- > 0 ||  param->values.value) \
+	type val = param->values.value ; \
+	while (param->prec -- > 0 ||  val) \
 	{ \
 		switch (param->radix) \
 		{ \
 			case 2: \
-				digit = param->values.value & 0x01; \
-				param->values.value >>= 1; \
+				digit = val & 0x01; \
+				val >>= 1; \
 				break; \
 			case 8: \
-				digit = param->values.value & 0x07; \
-				param->values.value >>= 3; \
+				digit = val & 0x07; \
+				val >>= 3; \
 				break; \
 			case 16: \
-				digit = param->values.value & 0x0F;\
-				param->values.value >>= 4; \
+				digit = val & 0x0F;\
+				val  >>= 4; \
 				break; \
 			default: \
 			case 10:  \
-				digit = param->values.value % 10; \
-				param->values.value /= 10; \
+				digit = val % 10; \
+				val  /= 10; \
 				break; \
 		} \
 		*param->out -- = ms_digits[digit]; \
-		param->length ++; \
+		param->length ++ ;\
 	} \
 }
 
@@ -338,12 +339,12 @@ static void name(struct param_s * param) \
  *
  * @param out		- Buffer with the converted value.
  */
-U2A(ulong2a,lvalue)
+U2A(ulong2a,unsigned LONG,lvalue)
 #if XCFG_FORMAT_LONGLONG
 #ifdef XCFG_FORMAT_LONG_ARE_LONGLONG
 #define	ullong2a	ulong2a
 #else
-U2A(ullong2a,llvalue)
+U2A(ullong2a,unsigned LONGLONG,llvalue)
 #endif
 #endif
 

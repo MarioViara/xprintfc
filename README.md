@@ -18,6 +18,7 @@ Example of code size now 2 architecture with all features enabled, compiled with
  - No library function required
  - Parametric function to emit single char
  - Configurable using config.h and -DHAVE_CONFIG_H
+ - 10% fastest than libc functions.
  - And much more
 
 
