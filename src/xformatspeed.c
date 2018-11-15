@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "xformatc.h"
 
@@ -71,10 +72,12 @@ static void testFormat(int (*format)(char *buffer,const char *format,va_list arg
 static void testspeed(const char * name,long count,int (*format)(char *buffer,const char * fmt,va_list args))
 {
 	long i;
-	time_t start,now;
+	struct timeval start,now;
+	double elapsed;
 	
 	printf("Starting test for %s ... ",name);
-	start = time(0);
+	fflush(stdout);
+	gettimeofday(&start,0);
 	
 	for (i = 0 ; i < count ; i++)
 	{
@@ -125,9 +128,12 @@ static void testspeed(const char * name,long count,int (*format)(char *buffer,co
 #endif
 	}
 
-	now = time(0);
+	gettimeofday(&now,0);
+	elapsed = ((double)now.tv_sec * 1000000.0 + now.tv_usec) - ((double)start.tv_sec * 1000000.0 + start.tv_usec);
+	elapsed /= 1000000.0;
 
-	printf(" Elapsed %lu second(s)\n",(long)(now - start));
+	printf(" Elapsed %.3f second(s)\n",elapsed);
+	fflush(stdout);
 }
 
 int main(int argc,char **argv)
