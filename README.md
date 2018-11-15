@@ -40,3 +40,5 @@ XCFG_FORMAT_STATIC      Set to static to reduce stack usage only
 
 XCFG_FORMAT_FLOAT       Set to 0 to exclude support for floating point.
 
+
+XCFG_FORMAT_FLOAT_PREC	Set to 1 to make calculation using float instead of double.

@@ -90,7 +90,12 @@ extern "C" {
 #endif
 
 
-
+/**
+ * Define to 1 to use internally float number instead of double.
+ */
+#ifndef XCFG_FORMAT_FLOAT_PREC
+#define XCFG_FORMAT_FLOAT_PREC	0
+#endif
 
 
 

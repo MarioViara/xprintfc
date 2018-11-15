@@ -82,6 +82,19 @@
 #endif
 
 /**
+ * Determine the precision of floating point number
+ */
+#if XCFG_FORMAT_FLOAT_PREC
+#ifdef DOUBLE
+#undef DOUBLE
+#endif
+#define DOUBLE			float
+#define DOUBLE_ARGS		double
+#else
+#define DOUBLE_ARGS		DOUBLE
+#endif
+
+/**
  * Structure with all parameter used
  */
 struct param_s
@@ -280,7 +293,7 @@ static  DOUBLE xpow10(int e)
 		{
 			result = table[size - 1];
 			for (e = e - size ; e ; e--)
-				result *= 10.0;
+				result *= (DOUBLE)10.0;
 		}
 		else
 			result = table[e - 1];
@@ -337,7 +350,7 @@ static void name(struct param_s * param) \
 				break; \
 			default: \
 			case 10:  \
-				digit = val % 10; \
+				digit = (unsigned char)(val % 10); \
 				val  /= 10; \
 				break; \
 		} \
@@ -425,12 +438,13 @@ static unsigned outBuffer(void (*myoutchar)(void *arg,char),void *arg,const char
 
 		if (toupper && (c >= 'a' && c <= 'z'))
 		{
-			c -= 'a' - 'A';
+			c = (char)(c - ('a' - 'A'));
 		}
 
 		(*myoutchar)(arg,c);
 		count++;
 	}
+
 
 	return count;
 }
@@ -529,7 +543,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 		else
 			i = formatStates[c - ' '] & 0x0F;
 
-		param.state = formatStates[(i << 3) + param.state] >> 4;
+		param.state = (char)(formatStates[(i << 3) + param.state] >> 4);
 
 
 		switch (param.state)
@@ -569,7 +583,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					default:
 						break;
 					case 'z':
-						param.flags &= ~FLAG_TYPE_MASK;
+						param.flags &= (unsigned)~FLAG_TYPE_MASK;
 						param.flags |= FLAG_TYPE_SIZEOF;
 						break;
 
@@ -578,12 +592,12 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 #if XCFG_FORMAT_LONGLONG
 						if ((param.flags & FLAG_TYPE_MASK) == FLAG_TYPE_LONG)
 						{
-							param.flags &= ~FLAG_TYPE_MASK;
+							param.flags &= (unsigned)~FLAG_TYPE_MASK;
 							param.flags |=  FLAG_TYPE_LONGLONG;
 						}
 						else
 						{
-							param.flags &= ~FLAG_TYPE_MASK;
+							param.flags &= (unsigned)~FLAG_TYPE_MASK;
 							param.flags |= FLAG_TYPE_LONG;
 
 						}
@@ -639,7 +653,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Pointer 
 						 */
 					case	'p':
-						param.flags &= ~FLAG_TYPE_MASK;
+						param.flags &= (unsigned)~FLAG_TYPE_MASK;
 						param.flags |= FLAG_INTEGER | FLAG_TYPE_SIZEOF;
 						param.radix = 16;
 						param.prec = sizeof(void *) * 2;
@@ -763,22 +777,22 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 							param.prec = 6;
 						}
 
-						param.dbl = va_arg(args,DOUBLE);
+						param.dbl = (DOUBLE)va_arg(args,DOUBLE_ARGS);
 						param.values.dvalue =  xpow10(param.prec);
 
 						if (param.dbl < 0)
 						{
 							param.flags |= FLAG_MINUS;
-							param.dbl		-= 0.5 / param.values.dvalue;
-							param.iPart	   = (FLOAT_LONG)param.dbl;
-							param.dbl		-=	(FLOAT_LONG)param.iPart;
+							param.dbl		-= (DOUBLE)0.5 / param.values.dvalue;
+							param.iPart	   = (unsigned FLOAT_LONG)param.dbl;
+							param.dbl		-=	(DOUBLE)(FLOAT_LONG)param.iPart;
 							param.dbl		 = - param.dbl;
 						}
 						else
 						{
-							param.dbl += 0.5 / param.values.dvalue;
-							param.iPart = (FLOAT_LONG)param.dbl;
-							param.dbl -= param.iPart;
+							param.dbl += (DOUBLE)0.5 / param.values.dvalue;
+							param.iPart = (unsigned FLOAT_LONG)param.dbl;
+							param.dbl -= (DOUBLE)param.iPart;
 						}
 
 						param.dbl *= param.values.dvalue;
