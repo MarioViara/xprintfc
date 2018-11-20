@@ -83,7 +83,7 @@ extern "C" {
 #endif
 
 /**
- * Define to 0 to support long long type (prefix ll)
+ * Define to 0 to remove support for long long type (prefix ll)
  */
 #ifndef XCFG_FORMAT_LONGLONG
 #define XCFG_FORMAT_LONGLONG    XCFG_FORMAT_LONG
