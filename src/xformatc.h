@@ -98,6 +98,20 @@ extern "C" {
 #endif
 
 
+/**
+ * Define to 1 to support floating point special value as nan and infinite the
+ * default behavior is undefined if an invalid floating point number is used.
+ *
+*/
+#ifndef XCFG_FORMAT_FLOAT_SPECIAL
+#define XCFG_FORMAT_FLOAT_SPECIAL	0
+#endif
+
+
+#if XCFG_FORMAT_FLOAT_SPECIAL
+#include <math.h>
+#endif
+
 
 unsigned xformat(void (*outchar)(void *arg,char),void *arg,const char * fmt,...);
 

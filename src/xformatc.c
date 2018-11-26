@@ -301,6 +301,28 @@ static  DOUBLE xpow10(int e)
 
 	return result;
 }
+
+
+#if XCFG_FORMAT_FLOAT_SPECIAL
+static const char *checkFloat(DOUBLE value)
+{
+	switch (fpclassify(value))
+	{
+		case	FP_NAN:
+				return "nan";
+
+		case	FP_INFINITE:
+				return "inf";
+
+		case	FP_SUBNORMAL:
+				return "sub";
+
+		default:
+				return 0;
+	}
+}
+#endif
+
 #endif
    
 /*
@@ -777,8 +799,19 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 							param.prec = 6;
 						}
 
-						param.dbl = (DOUBLE)va_arg(args,DOUBLE_ARGS);
 						param.values.dvalue =  xpow10(param.prec);
+						param.dbl = (DOUBLE)va_arg(args,DOUBLE_ARGS);
+
+#if XCFG_FORMAT_FLOAT_SPECIAL
+						param.out = (char *)checkFloat(param.dbl);
+						if (param.out != 0)
+						{
+							param.length = (int)xstrlen(param.out);
+
+						}
+						else
+						{
+#endif
 
 						if (param.dbl < 0)
 						{
@@ -812,6 +845,10 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 
 						param.prec = 0;
 						param.values.FLOAT_VALUE  = (unsigned FLOAT_LONG)param.iPart;
+
+#if XCFG_FORMAT_FLOAT_SPECIAL
+						}
+#endif
 						break;
 #endif
 
