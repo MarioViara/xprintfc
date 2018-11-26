@@ -817,14 +817,14 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						{
 							param.flags |= FLAG_MINUS;
 							param.dbl		-= (DOUBLE)0.5 / param.values.dvalue;
-							param.iPart	   = (unsigned FLOAT_LONG)param.dbl;
+							param.iPart	   = (FLOAT_LONG)param.dbl;
 							param.dbl		-=	(DOUBLE)(FLOAT_LONG)param.iPart;
 							param.dbl		 = - param.dbl;
 						}
 						else
 						{
 							param.dbl += (DOUBLE)0.5 / param.values.dvalue;
-							param.iPart = (unsigned FLOAT_LONG)param.dbl;
+							param.iPart = (FLOAT_LONG)param.dbl;
 							param.dbl -= (DOUBLE)param.iPart;
 						}
 
