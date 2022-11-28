@@ -669,7 +669,8 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					case	'P':
 						param.flags |=  FLAG_UPPER;
 						/* no break */
-						/*lint -fallthrough */
+						/* lint -fallthrough */
+						/* fall through */
 
 						/*
 						 * Pointer 
@@ -715,12 +716,10 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						 * Hex number upper case letter.
 						 */
 					case	'X':
-						/* no break */
 						param.flags |= FLAG_UPPER;
-
 						/* no break */
-
 						/* lint -fallthrough */
+						/* fall through */
 
 						/*
 						 * Hex number lower case
@@ -743,9 +742,9 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					case	'i':
 						param.flags |= FLAG_DECIMAL;
 						/* no break */
-
 						/* lint -fallthrough */
-
+						/* fall through */
+						
 						/*
 						 * Unsigned number
 						 */
@@ -760,7 +759,8 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 					case	'S':
 						param.flags |= FLAG_UPPER;
 						/* no break */
-						/*lint -fallthrough */
+						/* lint -fallthrough */
+						/* fall through */
 
 						/*
 						 * Normal string
@@ -779,6 +779,7 @@ unsigned xvformat(void (*outchar)(void *,char),void *arg,const char * fmt,va_lis
 						param.flags |= FLAG_UPPER;
 						/* no break */
 						/* lint -fallthrough */
+						/* fall through */
 
 						/*
 						 * Char
